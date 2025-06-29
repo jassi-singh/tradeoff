@@ -1,9 +1,27 @@
+import CandlestickChart from "@/components/CandlestickChart";
+import Leaderboard from "@/components/Leaderboard";
+import PortfolioBalance from "@/components/PortfolioBalance";
+import PortfolioGraph from "@/components/PortfolioGraph";
+
 export default function Home() {
   return (
-    <div className="grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20 font-[family-name:var(--font-geist-sans)]">
-      <main className="flex flex-col gap-[32px] row-start-2 items-center sm:items-start">
-        <h1 className="text-4xl font-bold">TradeOff: The 10-Minute Stock Market God</h1>
-      </main>
-    </div>
+    <main className="flex min-h-screen flex-col items-center justify-between p-8 bg-black text-white">
+      <div className="w-full max-w-7xl flex-grow flex flex-col">
+        <header className="mb-8">
+          <h1 className="text-3xl font-bold">TradeOff</h1>
+          <p className="text-gray-400">Minimalist Trading Dashboard</p>
+        </header>
+        <div className="flex-grow flex gap-4">
+          <div className="flex-[2]">
+            <CandlestickChart />
+          </div>
+          <div className="flex-[1] flex flex-col gap-4">
+            <PortfolioBalance />
+            <PortfolioGraph />
+            <Leaderboard />
+          </div>
+        </div>
+      </div>
+    </main>
   );
 }
