@@ -1,8 +1,9 @@
 import CandlestickChart from "@/components/CandlestickChart";
-import JoinGameOverlay from "@/components/JoinGameOverlay";
+import JoinGameOverlay from "@/components/overlay/JoinGameOverlay";
 import Leaderboard from "@/components/Leaderboard";
 import PortfolioBalance from "@/components/PortfolioBalance";
 import PortfolioGraph from "@/components/PortfolioGraph";
+import OverlayChildren from "@/components/overlay/OverlayChildren";
 
 export default function Home() {
   return (
@@ -23,7 +24,7 @@ export default function Home() {
           </div>
         </div>
       </div>
-      <JoinGameOverlay />
+      <JoinGameOverlay children={<OverlayChildren />} />
     </main>
   );
 }
