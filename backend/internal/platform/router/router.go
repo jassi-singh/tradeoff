@@ -3,12 +3,18 @@ package router
 import (
 	"net/http"
 
-	"github.com/go-chi/chi/v5"
 	"tradeoff/backend/internal/handler"
+
+	"github.com/go-chi/chi/v5"
+	"github.com/go-chi/cors"
 )
 
 func NewRouter(h *handler.Handler) *chi.Mux {
 	router := chi.NewRouter()
+
+	router.Use(cors.Handler(cors.Options{
+		AllowedOrigins: []string{"*"},
+	}))
 
 	router.Get("/", func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)

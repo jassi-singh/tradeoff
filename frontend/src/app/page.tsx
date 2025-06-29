@@ -1,4 +1,5 @@
 import CandlestickChart from "@/components/CandlestickChart";
+import JoinGameOverlay from "@/components/JoinGameOverlay";
 import Leaderboard from "@/components/Leaderboard";
 import PortfolioBalance from "@/components/PortfolioBalance";
 import PortfolioGraph from "@/components/PortfolioGraph";
@@ -22,6 +23,7 @@ export default function Home() {
           </div>
         </div>
       </div>
+      <JoinGameOverlay />
     </main>
   );
 }
