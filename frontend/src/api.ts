@@ -7,3 +7,7 @@ export const createUser = async (username: string): Promise<User> => {
     })
     return response.json()
 }
+
+export const websocketConnect = (playerId: string) => {
+    return new WebSocket(`${process.env.NEXT_PUBLIC_API_URL}/ws?playerId=${playerId}`)
+}

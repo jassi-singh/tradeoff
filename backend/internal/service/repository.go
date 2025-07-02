@@ -1,4 +1,4 @@
-package repository
+package service
 
 import "tradeoff/backend/internal/domain"
 

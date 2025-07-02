@@ -1,9 +1,9 @@
-import CandlestickChart from "@/components/CandlestickChart";
 import JoinGameOverlay from "@/components/overlay/JoinGameOverlay";
 import Leaderboard from "@/components/Leaderboard";
 import PortfolioBalance from "@/components/PortfolioBalance";
 import PortfolioGraph from "@/components/PortfolioGraph";
 import OverlayChildren from "@/components/overlay/OverlayChildren";
+import ChartComponent from "@/components/CandlestickChart";
 
 export default function Home() {
   return (
@@ -15,7 +15,7 @@ export default function Home() {
         </header>
         <div className="flex-grow flex gap-4">
           <div className="flex-[2]">
-            <CandlestickChart />
+            <ChartComponent />
           </div>
           <div className="flex-[1] flex flex-col gap-4">
             <PortfolioBalance />

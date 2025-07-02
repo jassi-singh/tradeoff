@@ -7,6 +7,7 @@ import (
 
 	"tradeoff/backend/internal/handler"
 	"tradeoff/backend/internal/platform/router"
+	"tradeoff/backend/internal/service"
 	"tradeoff/backend/internal/storage"
 
 	"github.com/joho/godotenv"
@@ -19,6 +20,13 @@ func main() {
 	if err != nil {
 		log.Fatal("Failed to connect to database: ", err)
 	}
+	playerService := service.NewPlayerService(store)
+
+	hub := service.NewHub()
+	go hub.Run()
+
+	handler := handler.NewHandler(playerService, hub)
+	router := router.NewRouter(handler)
 
 	port := os.Getenv("PORT")
 	if port == "" {
@@ -27,10 +35,7 @@ func main() {
 
 	log.Printf("TradeOff Game Server starting on port %s...", port)
 
-	h := handler.NewHandler(store)
-	r := router.NewRouter(h)
-
-	if err := http.ListenAndServe(":"+port, r); err != nil {
+	if err := http.ListenAndServe(":"+port, router); err != nil {
 		log.Fatalf("Could not start server: %s\n", err)
 	}
 }
