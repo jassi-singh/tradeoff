@@ -3,13 +3,14 @@ package service
 import (
 	"log"
 	"time"
+	"tradeoff/backend/internal/domain"
 
 	"github.com/gorilla/websocket"
 )
 
 type Client struct {
 	conn     *websocket.Conn
-	send     chan []byte
+	send     chan domain.WsMessage
 	hub      *Hub
 	PlayerId string
 }
@@ -17,16 +18,16 @@ type Client struct {
 func NewClient(conn *websocket.Conn, hub *Hub, playerId string) *Client {
 	return &Client{
 		conn:     conn,
-		send:     make(chan []byte),
+		send:     make(chan domain.WsMessage),
 		hub:      hub,
 		PlayerId: playerId,
 	}
 }
 
 const (
-	writeWait = 10 * time.Second
-	pongWait = 60 * time.Second
-	pingPeriod = (pongWait * 9) / 10
+	writeWait      = 10 * time.Second
+	pongWait       = 60 * time.Second
+	pingPeriod     = (pongWait * 9) / 10
 	maxMessageSize = 512
 )
 
@@ -73,13 +74,8 @@ func (c *Client) WritePump() {
 				return
 			}
 
-			w, err := c.conn.NextWriter(websocket.TextMessage)
-			if err != nil {
-				return
-			}
-			w.Write(message)
-
-			if err := w.Close(); err != nil {
+			if err := c.conn.WriteJSON(message); err != nil {
+				log.Printf("error: %v", err)
 				return
 			}
 		case <-ticker.C:

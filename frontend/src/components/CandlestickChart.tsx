@@ -1,10 +1,9 @@
 "use client";
 
+import { useChartStore } from "@/stores/useChartStore";
 import {
   createChart,
   IChartApi,
-  CandlestickData,
-  AreaData,
   ColorType,
   CandlestickSeries,
   AreaSeries,
@@ -17,13 +16,8 @@ const areaData = [
   { time: "2023-01-03", value: 102 },
 ];
 
-const candlestickData = [
-  { time: "2023-01-01", open: 100, high: 105, low: 95, close: 102 },
-  { time: "2023-01-02", open: 105, high: 110, low: 102, close: 108 },
-  { time: "2023-01-03", open: 102, high: 108, low: 98, close: 105 },
-];
-
 const ChartComponent: React.FC = () => {
+  const {chartPriceData: candlestickData} = useChartStore()
   // Use a ref to attach to the container div
   const chartContainerRef = useRef<HTMLDivElement>(null);
 

@@ -1,10 +1,13 @@
 package service
 
-import "log"
+import (
+	"log"
+	"tradeoff/backend/internal/domain"
+)
 
 type Hub struct {
 	Clients    map[*Client]bool
-	Broadcast  chan []byte
+	Broadcast  chan domain.WsMessage
 	Register   chan *Client
 	Unregister chan *Client
 }
@@ -12,7 +15,7 @@ type Hub struct {
 func NewHub() *Hub {
 	return &Hub{
 		Clients:    make(map[*Client]bool),
-		Broadcast:  make(chan []byte),
+		Broadcast:  make(chan domain.WsMessage),
 		Register:   make(chan *Client),
 		Unregister: make(chan *Client),
 	}
@@ -31,9 +34,9 @@ func (h *Hub) Run() {
 				close(client.send)
 				log.Println("Client unregistered", client.PlayerId)
 			}
-			
+
 		case message := <-h.Broadcast:
-			log.Println("Broadcasting message", string(message))
+			log.Println("Broadcasting message of type", message.Type)
 			for client := range h.Clients {
 				select {
 				case client.send <- message:

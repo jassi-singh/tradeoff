@@ -25,6 +25,10 @@ func main() {
 	hub := service.NewHub()
 	go hub.Run()
 
+	marketService := service.NewMarketService(hub)
+	marketService.LoadPriceData()
+	go marketService.StartPriceFeed()
+
 	handler := handler.NewHandler(playerService, hub)
 	router := router.NewRouter(handler)
 
