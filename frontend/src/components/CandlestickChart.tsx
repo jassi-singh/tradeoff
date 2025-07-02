@@ -10,12 +10,6 @@ import {
 } from "lightweight-charts";
 import React, { useEffect, useRef } from "react";
 
-const areaData = [
-  { time: "2023-01-01", value: 100 },
-  { time: "2023-01-02", value: 105 },
-  { time: "2023-01-03", value: 102 },
-];
-
 const ChartComponent: React.FC = () => {
   const {chartPriceData: candlestickData} = useChartStore()
   // Use a ref to attach to the container div
@@ -53,15 +47,15 @@ const ChartComponent: React.FC = () => {
     candlestickSeries.setData(candlestickData);
 
     // Add the area series with its data
-    const areaSeries = chart.addSeries(AreaSeries, {
-      lineColor: "#2962FF",
-      topColor: "#2962FF",
-      bottomColor: "rgba(41, 98, 255, 0.28)",
-    });
-    areaSeries.setData(areaData);
+    // const areaSeries = chart.addSeries(AreaSeries, {
+    //   lineColor: "#2962FF",
+    //   topColor: "#2962FF",
+    //   bottomColor: "rgba(41, 98, 255, 0.28)",
+    // });
+    // areaSeries.setData(areaData);
 
     // Fit the content to the chart
-    chart.timeScale().fitContent();
+    // chart.timeScale().fitContent();
 
     // Make the chart responsive to window resizing
     const handleResize = () => {
@@ -75,7 +69,7 @@ const ChartComponent: React.FC = () => {
       window.removeEventListener("resize", handleResize);
       chart.remove();
     };
-  }, [areaData, candlestickData]); // Re-run the effect if data changes
+  }, [candlestickData]); // Re-run the effect if data changes
 
   return (
     <div

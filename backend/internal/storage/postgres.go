@@ -2,7 +2,7 @@ package storage
 
 import (
 	"database/sql"
-	"os"
+	"tradeoff/backend/internal/config"
 
 	_ "github.com/jackc/pgx/v5/stdlib"
 )
@@ -11,9 +11,8 @@ type PostgresStore struct {
 	DB *sql.DB
 }
 
-func NewPostgresStore() (*PostgresStore, error) {
-	connectionString := os.Getenv("DATABASE_URL")
-	db, err := sql.Open("pgx", connectionString)
+func NewPostgresStore(config config.Config) (*PostgresStore, error) {
+	db, err := sql.Open("pgx", config.Database.URL)
 	if err != nil {
 		return nil, err
 	}
