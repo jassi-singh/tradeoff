@@ -5,38 +5,43 @@ import {
   createChart,
   IChartApi,
   ColorType,
+  ISeriesApi,
   CandlestickSeries,
-  AreaSeries,
+  DeepPartial,
+  ChartOptions,
 } from "lightweight-charts";
 import React, { useEffect, useRef } from "react";
 
 const ChartComponent: React.FC = () => {
-  const {chartPriceData: candlestickData} = useChartStore()
-  // Use a ref to attach to the container div
+  const { chartPriceData: candlestickData } = useChartStore();
   const chartContainerRef = useRef<HTMLDivElement>(null);
+  const chartRef = useRef<IChartApi | null>(null);
+  const seriesRef = useRef<ISeriesApi<"Candlestick"> | null>(null);
 
   useEffect(() => {
-    // Ensure the ref is attached to a DOM element
     if (!chartContainerRef.current) {
       return;
     }
 
-    const chartOptions = {
+    const chartOptions: DeepPartial<ChartOptions> = {
       layout: {
         textColor: "white",
-        background: { type: ColorType.Solid, color: "black" },
+        background: { type: ColorType.Solid, color: "#131722" },
+      },
+      grid: {
+        vertLines: {
+          color: "#20242f"
+        },
+        horzLines: {
+          color: "#20242f"
+        },
       },
       width: chartContainerRef.current.clientWidth,
-      height: 500, // Or make this a prop
     };
 
-    // Create the chart instance
-    const chart: IChartApi = createChart(
-      chartContainerRef.current,
-      chartOptions
-    );
+    const chart = createChart(chartContainerRef.current, chartOptions);
+    chartRef.current = chart;
 
-    // Add the candlestick series with its data
     const candlestickSeries = chart.addSeries(CandlestickSeries, {
       upColor: "#26a69a",
       downColor: "#ef5350",
@@ -44,7 +49,7 @@ const ChartComponent: React.FC = () => {
       wickUpColor: "#26a69a",
       wickDownColor: "#ef5350",
     });
-    candlestickSeries.setData(candlestickData);
+    seriesRef.current = candlestickSeries;
 
     // Add the area series with its data
     // const areaSeries = chart.addSeries(AreaSeries, {
@@ -55,26 +60,36 @@ const ChartComponent: React.FC = () => {
     // areaSeries.setData(areaData);
 
     // Fit the content to the chart
-    // chart.timeScale().fitContent();
+    chart.timeScale().fitContent();
 
-    // Make the chart responsive to window resizing
     const handleResize = () => {
-      chart.applyOptions({ width: chartContainerRef.current?.clientWidth });
+      if (chartRef.current && chartContainerRef.current) {
+        chartRef.current.applyOptions({
+          width: chartContainerRef.current.clientWidth,
+        });
+      }
     };
 
     window.addEventListener("resize", handleResize);
 
-    // Cleanup function to remove the chart and event listener on component unmount
     return () => {
       window.removeEventListener("resize", handleResize);
-      chart.remove();
+      if (chartRef.current) {
+        chartRef.current.remove();
+      }
     };
-  }, [candlestickData]); // Re-run the effect if data changes
+  }, []);
+
+  useEffect(() => {
+    if (seriesRef.current && candlestickData) {
+      seriesRef.current.setData(candlestickData);
+    }
+  }, [candlestickData]);
 
   return (
     <div
       ref={chartContainerRef}
-      className="chart-container"
+      className="chart-container h-full"
       style={{ position: "relative" }}
     />
   );

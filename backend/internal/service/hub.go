@@ -36,7 +36,6 @@ func (h *Hub) Run() {
 			}
 
 		case message := <-h.Broadcast:
-			log.Println("Broadcasting message of type", message.Type)
 			for client := range h.Clients {
 				select {
 				case client.send <- message:
