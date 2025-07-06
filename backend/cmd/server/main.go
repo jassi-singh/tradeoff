@@ -31,8 +31,8 @@ func main() {
 	go hub.Run()
 
 	marketService := service.NewMarketService(hub, config.Polygon.APIKey)
-	marketService.LoadPriceData()
-	go marketService.StartPriceFeed()
+	roundManager := service.NewRoundManager(hub, marketService)
+	go roundManager.Run()
 
 	handler := handler.NewHandler(playerService, hub)
 	router := router.NewRouter(handler)

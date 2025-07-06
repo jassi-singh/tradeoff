@@ -14,7 +14,22 @@ type PriceData struct {
 	Volume float64 `json:"volume"`
 }
 
+type WsMessageType string
+
+const (
+	WsMessageTypePriceData   WsMessageType = "price_data"
+	WsMessageTypeRoundStatus WsMessageType = "round_status"
+)
+
 type WsMessage struct {
-	Type    string      `json:"type"`
-	Payload interface{} `json:"payload"`
+	Type WsMessageType `json:"type"`
+	Data interface{}   `json:"payload"`
 }
+
+type RoundStatus string
+
+const (
+	RoundStatusLobby  RoundStatus = "lobby"
+	RoundStatusLive   RoundStatus = "live"
+	RoundStatusClosed RoundStatus = "closed"
+)
