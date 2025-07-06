@@ -2,7 +2,6 @@ package service
 
 import (
 	"log"
-	"tradeoff/backend/internal/domain"
 )
 
 type WsMessageType string
@@ -57,20 +56,5 @@ func (h *Hub) Run() {
 				}
 			}
 		}
-	}
-}
-
-// Helper functions to create typed messages
-func (h *Hub) NewPriceDataMessage(data domain.PriceData) WsMessage {
-	return WsMessage{
-		Type: WsMessageTypePriceData,
-		Data: data,
-	}
-}
-
-func (h *Hub) NewRoundStatusMessage(data domain.RoundStatus) WsMessage {
-	return WsMessage{
-		Type: WsMessageTypeRoundStatus,
-		Data: data,
 	}
 }

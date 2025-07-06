@@ -14,10 +14,10 @@ type PriceData struct {
 	Volume float64 `json:"volume"`
 }
 
-type RoundStatus string
+type Phase string
 
 const (
-	RoundStatusLobby  RoundStatus = "lobby"
-	RoundStatusLive   RoundStatus = "live"
-	RoundStatusClosed RoundStatus = "closed"
+	Lobby  Phase = "lobby"
+	Live   Phase = "live"
+	Closed Phase = "closed"
 )
