@@ -31,13 +31,11 @@ func (r *RoundManager) Run() {
 	for {
 		log.Println("--- New Round : Lobby ---")
 		r.roundStatus = domain.RoundStatusLobby
-		r.hub.Broadcast <- domain.WsMessage{
-			Type: domain.WsMessageTypeRoundStatus,
-			Data: map[string]domain.RoundStatus{"status": r.roundStatus},
-		}
+		r.hub.Broadcast <- r.hub.NewRoundStatusMessage(r.roundStatus)
 		<-time.After(LobbyDuration)
 		log.Println("---Round : Live ---")
-
+		r.roundStatus = domain.RoundStatusLive
+		r.hub.Broadcast <- r.hub.NewRoundStatusMessage(r.roundStatus)
 		<-time.After(LiveDuration)
 
 		log.Println("---Round : Cooldown ---")

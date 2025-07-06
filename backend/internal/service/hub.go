@@ -5,9 +5,21 @@ import (
 	"tradeoff/backend/internal/domain"
 )
 
+type WsMessageType string
+
+const (
+	WsMessageTypePriceData   WsMessageType = "price_data"
+	WsMessageTypeRoundStatus WsMessageType = "round_status"
+)
+
+type WsMessage struct {
+	Type WsMessageType `json:"type"`
+	Data any           `json:"payload"`
+}
+
 type Hub struct {
 	Clients    map[*Client]bool
-	Broadcast  chan domain.WsMessage
+	Broadcast  chan WsMessage
 	Register   chan *Client
 	Unregister chan *Client
 }
@@ -15,7 +27,7 @@ type Hub struct {
 func NewHub() *Hub {
 	return &Hub{
 		Clients:    make(map[*Client]bool),
-		Broadcast:  make(chan domain.WsMessage),
+		Broadcast:  make(chan WsMessage),
 		Register:   make(chan *Client),
 		Unregister: make(chan *Client),
 	}
@@ -45,5 +57,20 @@ func (h *Hub) Run() {
 				}
 			}
 		}
+	}
+}
+
+// Helper functions to create typed messages
+func (h *Hub) NewPriceDataMessage(data domain.PriceData) WsMessage {
+	return WsMessage{
+		Type: WsMessageTypePriceData,
+		Data: data,
+	}
+}
+
+func (h *Hub) NewRoundStatusMessage(data domain.RoundStatus) WsMessage {
+	return WsMessage{
+		Type: WsMessageTypeRoundStatus,
+		Data: data,
 	}
 }

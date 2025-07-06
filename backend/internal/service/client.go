@@ -3,14 +3,13 @@ package service
 import (
 	"log"
 	"time"
-	"tradeoff/backend/internal/domain"
 
 	"github.com/gorilla/websocket"
 )
 
 type Client struct {
 	conn     *websocket.Conn
-	send     chan domain.WsMessage
+	send     chan WsMessage
 	hub      *Hub
 	PlayerId string
 }
@@ -18,7 +17,7 @@ type Client struct {
 func NewClient(conn *websocket.Conn, hub *Hub, playerId string) *Client {
 	return &Client{
 		conn:     conn,
-		send:     make(chan domain.WsMessage),
+		send:     make(chan WsMessage),
 		hub:      hub,
 		PlayerId: playerId,
 	}
