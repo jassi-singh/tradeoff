@@ -33,7 +33,7 @@ func polygonPriceDataToDomain(p models.Agg) domain.PriceData {
 	}
 }
 
-func (m *MarketService) LoadPriceData(ctx context.Context, ticker string, from time.Time, to time.Time, timespan models.Timespan) ([]domain.PriceData, error) {
+func (m *MarketService) LoadPriceData(ctx context.Context, ticker string, from time.Time, to time.Time, timespan models.Timespan, limit *int) ([]domain.PriceData, error) {
 	priceData := []domain.PriceData{}
 	params := models.ListAggsParams{
 		Ticker:     ticker,
@@ -44,6 +44,10 @@ func (m *MarketService) LoadPriceData(ctx context.Context, ticker string, from t
 	}.
 		WithAdjusted(true).
 		WithOrder(models.Order("asc"))
+	if limit != nil {
+		params = params.
+			WithLimit(*limit)
+	}
 
 	iter := m.polygonClient.ListAggs(ctx, params)
 

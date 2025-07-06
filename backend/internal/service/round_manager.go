@@ -30,7 +30,12 @@ const (
 )
 
 func NewRoundManager(hub *Hub, marketService *MarketService) *RoundManager {
-	return &RoundManager{hub: hub, marketService: marketService}
+	return &RoundManager{
+		hub:            hub,
+		marketService:  marketService,
+		chartDataChan:  make(chan []domain.PriceData),
+		hourlyDataChan: make(chan []domain.PriceData),
+	}
 }
 
 func (r *RoundManager) Run() {
@@ -71,6 +76,12 @@ func (r *RoundManager) transitionToLive() {
 
 	log.Printf("Loaded %d daily chart data and %d hourly data", len(r.chartData), len(r.hourlyData))
 
+	if len(r.chartData) == 0 || len(r.hourlyData) == 0 {
+		log.Println("Failed to load chart data for live phase, transitioning to cooldown")
+		r.transitionToCooldown()
+		return
+	}
+
 	data := map[string]any{
 		"phase":        r.phase,
 		"phaseEndTime": time.Now().Add(LiveDuration).Unix(),
@@ -106,11 +117,15 @@ func (r *RoundManager) transitionToLobby() {
 
 	randomDecrease := -3 - int(rand.Float64()*10)
 	go func() {
-		from := time.Now().AddDate(-2, 0, 0) // 2 years ago
-		to := time.Now().AddDate(0, randomDecrease, 0)
-		log.Printf("Loading daily chart data from %s to %s", from, to)
+		// remove hours from the from time only date
+		from := time.Now().UTC().AddDate(-2, 0, 0) // 2 years ago
+		fromDateOnly := time.Date(from.Year(), from.Month(), from.Day(), 0, 0, 0, 0, from.Location())
+		to := time.Now().UTC().AddDate(0, randomDecrease, 0)
+		toDateOnly := time.Date(to.Year(), to.Month(), to.Day(), 0, 0, 0, 0, to.Location())
+		log.Printf("Loading daily chart data from %s to %s", fromDateOnly, toDateOnly)
+		limit := int(to.Sub(from).Hours() / 24)
 
-		chartData, err := r.marketService.LoadPriceData(context.Background(), Ticker, from, to, "day")
+		chartData, err := r.marketService.LoadPriceData(context.Background(), Ticker, fromDateOnly, toDateOnly, "day", &limit)
 		if err != nil {
 			log.Println("Error loading price data:", err)
 			r.chartDataChan <- nil
@@ -122,11 +137,14 @@ func (r *RoundManager) transitionToLobby() {
 	}()
 
 	go func() {
-		from := time.Now().AddDate(0, randomDecrease, 1)
-		to := time.Now().AddDate(0, randomDecrease, HourlyDataForDays)
-		log.Printf("Loading hourly chart data from %s to %s", from, to)
+		from := time.Now().UTC().AddDate(0, randomDecrease, 1)
+		fromDateOnly := time.Date(from.Year(), from.Month(), from.Day(), 0, 0, 0, 0, from.Location())
+		to := time.Now().UTC().AddDate(0, randomDecrease, HourlyDataForDays+1)
+		toDateOnly := time.Date(to.Year(), to.Month(), to.Day(), 0, 0, 0, 0, to.Location())
+		log.Printf("Loading hourly chart data from %s to %s", fromDateOnly, toDateOnly)
 
-		hourlyData, err := r.marketService.LoadPriceData(context.Background(), Ticker, from, to, "hour")
+		limit := HourlyDataForDays * 24 * 60
+		hourlyData, err := r.marketService.LoadPriceData(context.Background(), Ticker, fromDateOnly, toDateOnly, "hour", &limit)
 		if err != nil {
 			log.Println("Error loading hourly price data:", err)
 			r.hourlyDataChan <- nil
