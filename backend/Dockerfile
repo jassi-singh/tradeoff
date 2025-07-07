@@ -1,7 +1,7 @@
 # Dockerfile for the Go backend application
 
 # --- Builder Stage ---
-FROM golang:1.22-alpine AS builder
+FROM golang:1.23-alpine AS builder
 
 # Set the Current Working Directory inside the container
 WORKDIR /app
@@ -31,6 +31,9 @@ WORKDIR /root/
 
 # Copy the Pre-built binary file from the previous stage
 COPY --from=builder /server .
+
+# Copy the config file
+COPY --from=builder /app/config ./config
 
 # Expose port 8080 to the outside world
 EXPOSE 8080
