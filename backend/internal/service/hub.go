@@ -8,6 +8,7 @@ type WsMessageType string
 
 const (
 	WsMessageTypePriceUpdate WsMessageType = "price_update"
+	WsMessageTypeChartData   WsMessageType = "chart_data"
 	WsMessageTypeRoundStatus WsMessageType = "round_status"
 )
 

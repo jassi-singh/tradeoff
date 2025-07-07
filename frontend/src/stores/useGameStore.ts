@@ -3,6 +3,7 @@ import { create } from "zustand";
 
 type GameStore = {
     chartPriceData: CandlestickData[]
+    phase: "live" | "lobby" | "closed"
     phaseEndTime?: Date
     setChartPriceData: (chartPriceData: CandlestickData[]) => void
     appendSinglePriceData: (newData: CandlestickData) => void
@@ -13,6 +14,7 @@ type GameStore = {
 export const useGameStore = create<GameStore>((set, get) => ({
     chartPriceData: [],
     phaseEndTime: undefined,
+    phase: "lobby",
     setChartPriceData: (chartPriceData: CandlestickData[]) => set({ chartPriceData }),
     appendSinglePriceData: (newData: CandlestickData) => {
         const chartPriceData = get().chartPriceData;
@@ -43,15 +45,21 @@ export const useGameStore = create<GameStore>((set, get) => ({
         }
     },
     handleWSMessage: (msg: { type: string, data: any }) => {
-        if (msg.type === "price_update") {
-            get().appendSinglePriceData(msg.data);
-        }
+        const currentPhase = get().phase;
+        switch (msg.type) {
+            case "chart_data":
+                set({ chartPriceData: msg.data.chartData });
+                break;
+            case "price_update":
+                if (currentPhase === "live") {
+                    get().appendSinglePriceData(msg.data);
+                }
+                break;
+            case "round_status":
+                set({ phaseEndTime: new Date(msg.data.nextPhaseTime), phase: msg.data.phase });
 
-        if (msg.type === "round_status") {
-            if (msg.data.phase === "live")
-                get().setChartPriceData(msg.data.chartData);
-
-            set({ phaseEndTime: new Date(msg.data.nextPhaseTime) });
+            default:
+                console.warn(`Unhandled message type: ${msg.type}`);
         }
     }
 }))

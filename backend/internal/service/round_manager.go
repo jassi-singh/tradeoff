@@ -21,11 +21,10 @@ type RoundManager struct {
 
 const (
 	LobbyDuration     = 15 * time.Second
-	LiveDuration      = 45 * time.Second
+	LiveDuration      = 1 * time.Minute
 	CooldownDuration  = 10 * time.Second
 	HourlyDataForDays = 10
 	RoundDuration     = LobbyDuration + LiveDuration + CooldownDuration
-	LivePhaseTick     = LiveDuration / (HourlyDataForDays * 24)
 	Ticker            = "X:BTCUSD"
 )
 
@@ -81,11 +80,6 @@ func (r *RoundManager) transitionToLive() {
 	r.phase = domain.Live
 	r.phaseCountDown = int(LiveDuration.Seconds())
 
-	r.chartData = <-r.chartDataChan
-	r.hourlyData = <-r.hourlyDataChan
-
-	log.Printf("Loaded %d daily chart data and %d hourly data", len(r.chartData), len(r.hourlyData))
-
 	if len(r.chartData) == 0 || len(r.hourlyData) == 0 {
 		log.Println("Failed to load chart data for live phase, transitioning to cooldown")
 		r.transitionToCooldown()
@@ -95,7 +89,6 @@ func (r *RoundManager) transitionToLive() {
 	data := map[string]any{
 		"phase":         r.phase,
 		"nextPhaseTime": time.Now().Add(LiveDuration),
-		"chartData":     r.chartData,
 	}
 	r.broadcastRoundStatus(data)
 
@@ -126,6 +119,21 @@ func (r *RoundManager) transitionToLobby() {
 		"nextPhaseTime": time.Now().Add(LobbyDuration),
 	}
 	r.broadcastRoundStatus(data)
+
+	r.chartData = <-r.chartDataChan
+	r.hourlyData = <-r.hourlyDataChan
+
+	log.Printf("Loaded %d daily chart data and %d hourly data", len(r.chartData), len(r.hourlyData))
+
+	data = map[string]any{
+		"chartData": r.chartData,
+	}
+
+	r.hub.Broadcast <- WsMessage{
+		Type: WsMessageTypeChartData,
+		Data: data,
+	}
+
 }
 
 func (r *RoundManager) broadcastRoundStatus(data map[string]any) {
@@ -163,11 +171,11 @@ func (r *RoundManager) loadDailyChartData(randomDecrease int) {
 }
 
 func (r *RoundManager) loadHourlyChartData(randomDecrease int) {
-	from := truncateToDate(time.Now().UTC().AddDate(0, randomDecrease, 1))
-	to := truncateToDate(from.AddDate(0, 0, HourlyDataForDays+1))
+	from := truncateToDate(time.Now().UTC().AddDate(0, randomDecrease, 0))
+	to := truncateToDate(from.AddDate(0, 0, HourlyDataForDays))
 	log.Printf("Loading hourly chart data from %s to %s", from, to)
 
-	limit := HourlyDataForDays * 24
+	limit := HourlyDataForDays * 24 * 60
 	hourlyData, err := r.marketService.LoadPriceData(context.Background(), Ticker, from, to, "hour", &limit)
 	if err != nil {
 		log.Println("Error loading hourly price data:", err)
@@ -184,12 +192,14 @@ func (r *RoundManager) runLivePhase() {
 		log.Println("no hourly data to broadcast")
 		return
 	}
-	ticker := time.NewTicker(LivePhaseTick)
+	livePhaseTick := LiveDuration / time.Duration(len(r.hourlyData))
+	log.Printf("Live phase tick duration: %s", livePhaseTick)
+	ticker := time.NewTicker(livePhaseTick)
 	defer ticker.Stop()
 
 	i := 0
 	for range ticker.C {
-		if i >= len(r.hourlyData) {
+		if i >= len(r.hourlyData) || r.phase != domain.Live {
 			break
 		}
 
