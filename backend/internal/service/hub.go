@@ -7,13 +7,13 @@ import (
 type WsMessageType string
 
 const (
-	WsMessageTypePriceData   WsMessageType = "price_data"
+	WsMessageTypePriceUpdate WsMessageType = "price_update"
 	WsMessageTypeRoundStatus WsMessageType = "round_status"
 )
 
 type WsMessage struct {
 	Type WsMessageType `json:"type"`
-	Data any           `json:"payload"`
+	Data any           `json:"data"`
 }
 
 type Hub struct {

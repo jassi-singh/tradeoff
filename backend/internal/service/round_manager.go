@@ -39,6 +39,7 @@ func NewRoundManager(hub *Hub, marketService *MarketService) *RoundManager {
 }
 
 func (r *RoundManager) Run() {
+	time.Sleep(3 * time.Second) // Give time for the hub to start
 
 	timer := time.NewTicker(1 * time.Second)
 	defer timer.Stop()
@@ -83,9 +84,9 @@ func (r *RoundManager) transitionToLive() {
 	}
 
 	data := map[string]any{
-		"phase":        r.phase,
-		"phaseEndTime": time.Now().Add(LiveDuration).Unix(),
-		"chartData":    r.chartData,
+		"phase":         r.phase,
+		"nextPhaseTime": time.Now().Add(LiveDuration),
+		"chartData":     r.chartData,
 	}
 	msg := WsMessage{
 		Type: WsMessageTypeRoundStatus,
@@ -185,18 +186,22 @@ func (r *RoundManager) runLivePhase() {
 		lastChartData := r.chartData[len(r.chartData)-1]
 		priceData := r.hourlyData[i]
 
-		if lastChartData.Time.Day() != priceData.Time.Day() {
+		lastDataTime := time.Unix(lastChartData.Time, 0)
+		priceDataTime := time.Unix(priceData.Time, 0)
+
+		if lastDataTime.Day() != priceDataTime.Day() {
 			r.chartData = append(r.chartData, priceData)
 		} else {
 			lastChartData.High = max(lastChartData.High, priceData.High)
 			lastChartData.Low = min(lastChartData.Low, priceData.Low)
 			lastChartData.Close = priceData.Close
 			lastChartData.Volume += priceData.Volume
-			r.chartData[len(r.chartData)-1] = priceData
+			priceData = lastChartData
+			r.chartData[len(r.chartData)-1] = lastChartData
 		}
 
 		msg := WsMessage{
-			Type: WsMessageTypePriceData,
+			Type: WsMessageTypePriceUpdate,
 			Data: priceData,
 		}
 		r.hub.Broadcast <- msg

@@ -24,7 +24,7 @@ func NewMarketService(hub *Hub, apiKey string) *MarketService {
 
 func polygonPriceDataToDomain(p models.Agg) domain.PriceData {
 	return domain.PriceData{
-		Time:   time.Time(p.Timestamp),
+		Time:   time.Time(p.Timestamp).Unix(),
 		Open:   p.Open,
 		High:   p.High,
 		Low:    p.Low,

@@ -1,6 +1,6 @@
 "use client";
 
-import { useChartStore } from "@/stores/useChartStore";
+import { useGameStore } from "@/stores/useGameStore";
 import {
   createChart,
   IChartApi,
@@ -13,7 +13,7 @@ import {
 import React, { useEffect, useRef } from "react";
 
 const ChartComponent: React.FC = () => {
-  const { chartPriceData: candlestickData } = useChartStore();
+  const { chartPriceData: candlestickData } = useGameStore();
   const chartContainerRef = useRef<HTMLDivElement>(null);
   const chartRef = useRef<IChartApi | null>(null);
   const seriesRef = useRef<ISeriesApi<"Candlestick"> | null>(null);

@@ -4,6 +4,7 @@ import PortfolioBalance from "@/components/PortfolioBalance";
 import PortfolioGraph from "@/components/PortfolioGraph";
 import OverlayChildren from "@/components/overlay/OverlayChildren";
 import ChartComponent from "@/components/CandlestickChart";
+import { Timer } from "@/components/Timer";
 
 export default function Home() {
   return (
@@ -12,6 +13,8 @@ export default function Home() {
         <header className="mb-8">
           <h1 className="text-3xl font-bold">TradeOff</h1>
           <p className="text-gray-400">Minimalist Trading Dashboard</p>
+
+          <Timer />
         </header>
         <div className="flex-grow flex gap-4">
           <div className="flex-[2]">
