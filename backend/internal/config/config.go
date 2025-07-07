@@ -20,7 +20,7 @@ type Config struct {
 }
 
 func LoadConfig() (*Config, error) {
-	configPath := "config/config.yml"
+	configPath := os.Getenv("CONFIG_PATH")
 
 	content, err := os.ReadFile(configPath)
 	if err != nil {

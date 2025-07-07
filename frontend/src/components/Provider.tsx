@@ -16,7 +16,7 @@ const Provider = ({ children }: { children: React.ReactNode }) => {
     return () => {
       disconnect();
     };
-  }, [user]);
+  }, [user, connect, disconnect]);
 
   return <>{children}</>;
 };

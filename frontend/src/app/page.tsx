@@ -26,7 +26,9 @@ export default function Home() {
           </div>
         </div>
       </div>
-      <JoinGameOverlay children={<OverlayChildren />} />
+      <JoinGameOverlay>
+        <OverlayChildren />
+      </JoinGameOverlay>
     </main>
   );
 }

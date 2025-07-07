@@ -1,14 +1,15 @@
 import { CandlestickData } from "lightweight-charts";
 import { create } from "zustand";
+import { GamePhase, WebSocketMessage } from "@/types";
 
 type GameStore = {
     chartPriceData: CandlestickData[]
-    phase: "live" | "lobby" | "closed"
+    phase: GamePhase
     phaseEndTime?: Date
     setChartPriceData: (chartPriceData: CandlestickData[]) => void
     appendSinglePriceData: (newData: CandlestickData) => void
 
-    handleWSMessage: (msg: { type: string, data: any }) => void
+    handleWSMessage: (msg: WebSocketMessage) => void
 }
 
 export const useGameStore = create<GameStore>((set, get) => ({
@@ -26,9 +27,12 @@ export const useGameStore = create<GameStore>((set, get) => ({
         }
         const lastData = chartPriceData[chartPriceData.length - 1];
 
-        // if both has same day update last else add new
-        const lastDate = new Date((lastData.time as any) * 1000);
-        const newDate = new Date((newData.time as any) * 1000);
+        if (typeof lastData.time !== 'number' || typeof newData.time !== 'number') {
+            return;
+        }
+
+        const lastDate = new Date(lastData.time * 1000);
+        const newDate = new Date(newData.time * 1000);
 
         if (lastDate.getUTCDate() === newDate.getUTCDate()) {
             chartPriceData.pop();
@@ -44,7 +48,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
             }));
         }
     },
-    handleWSMessage: (msg: { type: string, data: any }) => {
+    handleWSMessage: (msg: WebSocketMessage) => {
         const currentPhase = get().phase;
         switch (msg.type) {
             case "chart_data":
@@ -66,9 +70,8 @@ export const useGameStore = create<GameStore>((set, get) => ({
                     phaseEndTime: msg.data.phaseEndTime ? new Date(msg.data.phaseEndTime) : undefined
                 });
                 break;
-
             default:
-                console.warn(`Unhandled message type: ${msg.type}`);
+                console.warn(`Unhandled message type: ${(msg as WebSocketMessage).type}`);
         }
     }
 }))
