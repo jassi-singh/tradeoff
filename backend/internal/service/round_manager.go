@@ -44,26 +44,35 @@ func (r *RoundManager) Run() {
 	timer := time.NewTicker(1 * time.Second)
 	defer timer.Stop()
 
-	for range timer.C {
+	for {
 		if r.phase == "" {
 			log.Println("--- Starting Round Manager ---")
 			r.transitionToLobby()
-			continue
 		}
 
-		r.phaseCountDown--
-
-		if r.phaseCountDown <= 0 {
-			switch r.phase {
-			case domain.Lobby:
-				r.transitionToLive()
-			case domain.Live:
-				r.transitionToCooldown()
-			case domain.Closed:
-				r.transitionToLobby()
-			}
+		select {
+		case <-timer.C:
+			r.updatePhase()
 		}
+	}
+}
 
+func (r *RoundManager) updatePhase() {
+	if r.phaseCountDown <= 0 {
+		return
+	}
+
+	r.phaseCountDown--
+
+	if r.phaseCountDown <= 0 {
+		switch r.phase {
+		case domain.Lobby:
+			r.transitionToLive()
+		case domain.Live:
+			r.transitionToCooldown()
+		case domain.Closed:
+			r.transitionToLobby()
+		}
 	}
 }
 
@@ -71,7 +80,7 @@ func (r *RoundManager) transitionToLive() {
 	log.Println("--- Transitioning to Live Phase ---")
 	r.phase = domain.Live
 	r.phaseCountDown = int(LiveDuration.Seconds())
-	log.Println(r.chartDataChan, r.hourlyDataChan)
+
 	r.chartData = <-r.chartDataChan
 	r.hourlyData = <-r.hourlyDataChan
 
@@ -88,11 +97,7 @@ func (r *RoundManager) transitionToLive() {
 		"nextPhaseTime": time.Now().Add(LiveDuration),
 		"chartData":     r.chartData,
 	}
-	msg := WsMessage{
-		Type: WsMessageTypeRoundStatus,
-		Data: data,
-	}
-	r.hub.Broadcast <- msg
+	r.broadcastRoundStatus(data)
 
 	go r.runLivePhase()
 }
@@ -106,6 +111,24 @@ func (r *RoundManager) transitionToCooldown() {
 		"phase":         r.phase,
 		"nextPhaseTime": time.Now().Add(CooldownDuration),
 	}
+	r.broadcastRoundStatus(data)
+}
+
+func (r *RoundManager) transitionToLobby() {
+	log.Println("--- Transitioning to Lobby Phase ---")
+	r.phase = domain.Lobby
+	r.phaseCountDown = int(LobbyDuration.Seconds())
+
+	r.loadMarketData()
+
+	data := map[string]any{
+		"phase":         r.phase,
+		"nextPhaseTime": time.Now().Add(LobbyDuration),
+	}
+	r.broadcastRoundStatus(data)
+}
+
+func (r *RoundManager) broadcastRoundStatus(data map[string]any) {
 	msg := WsMessage{
 		Type: WsMessageTypeRoundStatus,
 		Data: data,
@@ -113,60 +136,46 @@ func (r *RoundManager) transitionToCooldown() {
 	r.hub.Broadcast <- msg
 }
 
-func (r *RoundManager) transitionToLobby() {
-	log.Println("--- Transitioning to Lobby Phase ---")
+func truncateToDate(t time.Time) time.Time {
+	return time.Date(t.Year(), t.Month(), t.Day(), 0, 0, 0, 0, t.Location())
+}
 
+func (r *RoundManager) loadMarketData() {
 	randomDecrease := -3 - int(rand.Float64()*10)
-	go func() {
-		// remove hours from the from time only date
-		from := time.Now().UTC().AddDate(-2, 0, 0) // 2 years ago
-		fromDateOnly := time.Date(from.Year(), from.Month(), from.Day(), 0, 0, 0, 0, from.Location())
-		to := time.Now().UTC().AddDate(0, randomDecrease, 0)
-		toDateOnly := time.Date(to.Year(), to.Month(), to.Day(), 0, 0, 0, 0, to.Location())
-		log.Printf("Loading daily chart data from %s to %s", fromDateOnly, toDateOnly)
-		limit := int(to.Sub(from).Hours() / 24)
+	go r.loadDailyChartData(randomDecrease)
+	go r.loadHourlyChartData(randomDecrease)
+}
 
-		chartData, err := r.marketService.LoadPriceData(context.Background(), Ticker, fromDateOnly, toDateOnly, "day", &limit)
-		if err != nil {
-			log.Println("Error loading price data:", err)
-			r.chartDataChan <- nil
-			return
-		}
+func (r *RoundManager) loadDailyChartData(randomDecrease int) {
+	from := truncateToDate(time.Now().UTC().AddDate(-2, 0, 0))
+	to := truncateToDate(time.Now().UTC().AddDate(0, randomDecrease, 0))
+	log.Printf("Loading daily chart data from %s to %s", from, to)
+	limit := int(to.Sub(from).Hours() / 24)
 
-		log.Printf("Loaded %d daily chart data points", len(chartData))
-		r.chartDataChan <- chartData
-	}()
-
-	go func() {
-		from := time.Now().UTC().AddDate(0, randomDecrease, 1)
-		fromDateOnly := time.Date(from.Year(), from.Month(), from.Day(), 0, 0, 0, 0, from.Location())
-		to := time.Now().UTC().AddDate(0, randomDecrease, HourlyDataForDays+1)
-		toDateOnly := time.Date(to.Year(), to.Month(), to.Day(), 0, 0, 0, 0, to.Location())
-		log.Printf("Loading hourly chart data from %s to %s", fromDateOnly, toDateOnly)
-
-		limit := HourlyDataForDays * 24 * 60
-		hourlyData, err := r.marketService.LoadPriceData(context.Background(), Ticker, fromDateOnly, toDateOnly, "hour", &limit)
-		if err != nil {
-			log.Println("Error loading hourly price data:", err)
-			r.hourlyDataChan <- nil
-			return
-		}
-		log.Printf("Loaded %d hourly chart data points", len(hourlyData))
-		r.hourlyDataChan <- hourlyData
-	}()
-
-	r.phase = domain.Lobby
-	r.phaseCountDown = int(LobbyDuration.Seconds())
-
-	data := map[string]any{
-		"phase":         r.phase,
-		"nextPhaseTime": time.Now().Add(LobbyDuration),
+	chartData, err := r.marketService.LoadPriceData(context.Background(), Ticker, from, to, "day", &limit)
+	if err != nil {
+		log.Println("Error loading price data:", err)
+		r.chartDataChan <- nil
+		return
 	}
-	msg := WsMessage{
-		Type: WsMessageTypeRoundStatus,
-		Data: data,
+	log.Printf("Loaded %d daily chart data points", len(chartData))
+	r.chartDataChan <- chartData
+}
+
+func (r *RoundManager) loadHourlyChartData(randomDecrease int) {
+	from := truncateToDate(time.Now().UTC().AddDate(0, randomDecrease, 1))
+	to := truncateToDate(from.AddDate(0, 0, HourlyDataForDays+1))
+	log.Printf("Loading hourly chart data from %s to %s", from, to)
+
+	limit := HourlyDataForDays * 24
+	hourlyData, err := r.marketService.LoadPriceData(context.Background(), Ticker, from, to, "hour", &limit)
+	if err != nil {
+		log.Println("Error loading hourly price data:", err)
+		r.hourlyDataChan <- nil
+		return
 	}
-	r.hub.Broadcast <- msg
+	log.Printf("Loaded %d hourly chart data points", len(hourlyData))
+	r.hourlyDataChan <- hourlyData
 }
 
 func (r *RoundManager) runLivePhase() {
@@ -183,21 +192,24 @@ func (r *RoundManager) runLivePhase() {
 		if i >= len(r.hourlyData) {
 			break
 		}
-		lastChartData := r.chartData[len(r.chartData)-1]
+
 		priceData := r.hourlyData[i]
 
-		lastDataTime := time.Unix(lastChartData.Time, 0)
-		priceDataTime := time.Unix(priceData.Time, 0)
-
-		if lastDataTime.Day() != priceDataTime.Day() {
+		if len(r.chartData) == 0 {
 			r.chartData = append(r.chartData, priceData)
 		} else {
-			lastChartData.High = max(lastChartData.High, priceData.High)
-			lastChartData.Low = min(lastChartData.Low, priceData.Low)
-			lastChartData.Close = priceData.Close
-			lastChartData.Volume += priceData.Volume
-			priceData = lastChartData
-			r.chartData[len(r.chartData)-1] = lastChartData
+			lastChartData := &r.chartData[len(r.chartData)-1]
+			lastDataTime := time.Unix(lastChartData.Time, 0)
+			priceDataTime := time.Unix(priceData.Time, 0)
+
+			if lastDataTime.Day() != priceDataTime.Day() {
+				r.chartData = append(r.chartData, priceData)
+			} else {
+				lastChartData.High = max(lastChartData.High, priceData.High)
+				lastChartData.Low = min(lastChartData.Low, priceData.Low)
+				lastChartData.Close = priceData.Close
+				lastChartData.Volume += priceData.Volume
+			}
 		}
 
 		msg := WsMessage{
