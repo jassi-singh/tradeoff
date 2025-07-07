@@ -49,10 +49,8 @@ func (r *RoundManager) Run() {
 			r.transitionToLobby()
 		}
 
-		select {
-		case <-timer.C:
-			r.updatePhase()
-		}
+		<-timer.C
+		r.updatePhase()
 	}
 }
 
