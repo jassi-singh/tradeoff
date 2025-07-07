@@ -54,6 +54,14 @@ func (r *RoundManager) Run() {
 	}
 }
 
+func (r *RoundManager) GetGameState() map[string]any {
+	return map[string]any{
+		"phase":        r.phase,
+		"chartData":    r.chartData,
+		"phaseEndTime": time.Now().Add(time.Duration(r.phaseCountDown) * time.Second),
+	}
+}
+
 func (r *RoundManager) updatePhase() {
 	if r.phaseCountDown <= 0 {
 		return

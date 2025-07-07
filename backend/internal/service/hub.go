@@ -10,6 +10,7 @@ const (
 	WsMessageTypePriceUpdate WsMessageType = "price_update"
 	WsMessageTypeChartData   WsMessageType = "chart_data"
 	WsMessageTypeRoundStatus WsMessageType = "round_status"
+	WsMessageTypeGameState   WsMessageType = "game_state"
 )
 
 type WsMessage struct {
@@ -17,11 +18,17 @@ type WsMessage struct {
 	Data any           `json:"data"`
 }
 
+type DirectMessage struct {
+	Client  *Client   `json:"client"`
+	Message WsMessage `json:"message"`
+}
+
 type Hub struct {
 	Clients    map[*Client]bool
 	Broadcast  chan WsMessage
 	Register   chan *Client
 	Unregister chan *Client
+	SendDirect chan DirectMessage
 }
 
 func NewHub() *Hub {
@@ -30,6 +37,7 @@ func NewHub() *Hub {
 		Broadcast:  make(chan WsMessage),
 		Register:   make(chan *Client),
 		Unregister: make(chan *Client),
+		SendDirect: make(chan DirectMessage),
 	}
 }
 
@@ -56,6 +64,11 @@ func (h *Hub) Run() {
 					delete(h.Clients, client)
 				}
 			}
+		case directMessage := <-h.SendDirect:
+			select {
+			case directMessage.Client.send <- directMessage.Message:
+			}
 		}
+
 	}
 }

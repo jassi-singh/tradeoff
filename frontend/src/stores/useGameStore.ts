@@ -57,6 +57,15 @@ export const useGameStore = create<GameStore>((set, get) => ({
                 break;
             case "round_status":
                 set({ phaseEndTime: new Date(msg.data.nextPhaseTime), phase: msg.data.phase });
+                break;
+
+            case "game_state":
+                set({
+                    chartPriceData: msg.data.chartData,
+                    phase: msg.data.phase,
+                    phaseEndTime: msg.data.phaseEndTime ? new Date(msg.data.phaseEndTime) : undefined
+                });
+                break;
 
             default:
                 console.warn(`Unhandled message type: ${msg.type}`);

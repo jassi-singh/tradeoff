@@ -15,7 +15,6 @@ var upgrader = websocket.Upgrader{
 }
 
 func (h *Handler) HandleWebSocket(w http.ResponseWriter, r *http.Request) {
-	
 
 	conn, err := upgrader.Upgrade(w, r, nil)
 	if err != nil {
@@ -25,8 +24,21 @@ func (h *Handler) HandleWebSocket(w http.ResponseWriter, r *http.Request) {
 
 	client := service.NewClient(conn, h.Hub, r.URL.Query().Get("playerId"))
 
-	h.Hub.Register <- client
-
 	go client.ReadPump()
 	go client.WritePump()
+
+	rm := h.RoundManager
+	wsMessage := service.WsMessage{
+		Type: service.WsMessageTypeGameState,
+		Data: rm.GetGameState(),
+	}
+
+	directMessage := service.DirectMessage{
+		Client:  client,
+		Message: wsMessage,
+	}
+
+	h.Hub.SendDirect <- directMessage
+	h.Hub.Register <- client
 }
+
