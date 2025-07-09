@@ -1,0 +1,20 @@
+# backend/.air.toml
+
+root = "."
+
+tmp_dir = "tmp"
+
+[build]
+cmd = "go build -o tmp/main ./cmd/server"
+bin = "tmp/main"
+full_bin = false
+
+include_ext = ["go"]
+exclude_dir = ["tmp"]
+
+[log]
+time = true
+color = true
+
+[env]
+
