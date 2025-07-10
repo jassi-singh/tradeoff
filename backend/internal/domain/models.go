@@ -1,10 +1,12 @@
 package domain
 
+import "time"
+
 type Player struct {
-	Id                 string `json:"id"`
-	Username           string `json:"username"`
-	RefreshToken       string `json:"-"`
-	RefreshTokenExpiry int64  `json:"-"`
+	Id                 string    `json:"id"`
+	Username           string    `json:"username"`
+	RefreshToken       string    `json:"-"`
+	RefreshTokenExpiry time.Time `json:"-"`
 }
 
 type PriceData struct {

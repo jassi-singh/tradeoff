@@ -1,7 +1,7 @@
-import { User } from "@/types";
+import { UserWithToken } from "@/types";
 
-export const createUser = async (username: string): Promise<User> => {
-    const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/player`, {
+export const login = async (username: string): Promise<UserWithToken> => {
+    const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/login`, {
         method: "POST",
         body: JSON.stringify({ username }),
     })

@@ -3,6 +3,12 @@ export interface User {
     username: string;
 }
 
+export interface UserWithToken {
+    user: User;
+    token: string;
+    refreshToken: string;
+}
+
 // New types for WebSocket messages
 import { CandlestickData } from "lightweight-charts";
 

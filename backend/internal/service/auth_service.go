@@ -45,8 +45,11 @@ func (s *AuthService) Login(payload LoginParams) (UserWithToken, error) {
 		return UserWithToken{}, err
 	}
 	player.RefreshToken = refreshToken
-	player.RefreshTokenExpiry = time.Now().Add(24 * time.Hour).Unix()
+	player.RefreshTokenExpiry = time.Now().Add(24 * time.Hour)
 	player, err = s.playerRepository.CreatePlayer(player)
+	if err != nil {
+		return UserWithToken{}, fmt.Errorf("failed to create player: %w", err)
+	}
 
 	return UserWithToken{
 		User:         player,
@@ -63,7 +66,7 @@ func (s *AuthService) RefreshToken(refreshToken string) (UserWithToken, error) {
 	}
 
 	// Check if the refresh token is still valid
-	if player.RefreshTokenExpiry < time.Now().Unix() {
+	if player.RefreshTokenExpiry.Unix() < time.Now().Unix() {
 		return UserWithToken{}, fmt.Errorf("refresh token has expired")
 	}
 
@@ -80,7 +83,7 @@ func (s *AuthService) RefreshToken(refreshToken string) (UserWithToken, error) {
 
 	// Update the player's refresh token and expiry
 	player.RefreshToken = newRefreshToken
-	player.RefreshTokenExpiry = time.Now().Add(24 * time.Hour).Unix()
+	player.RefreshTokenExpiry = time.Now().Add(24 * time.Hour)
 	player, err = s.playerRepository.UpdatePlayer(player)
 	if err != nil {
 		return UserWithToken{}, err

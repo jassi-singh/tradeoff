@@ -2,6 +2,7 @@ package storage
 
 import (
 	"fmt"
+	"log"
 	"tradeoff/backend/internal/domain"
 )
 
@@ -9,6 +10,7 @@ func (s *PostgresStore) CreatePlayer(player domain.Player) (domain.Player, error
 	query := `INSERT INTO public.players (username, refresh_token, refresh_token_expiry) VALUES ($1, $2, $3) RETURNING id, username, refresh_token, refresh_token_expiry`
 	err := s.DB.QueryRow(query, player.Username, player.RefreshToken, player.RefreshTokenExpiry).Scan(&player.Id, &player.Username, &player.RefreshToken, &player.RefreshTokenExpiry)
 	if err != nil {
+		log.Println("Error creating player:", err)
 		return domain.Player{}, err
 	}
 	return player, nil
@@ -41,7 +43,7 @@ func (s *PostgresStore) UpdatePlayer(player domain.Player) (domain.Player, error
 		params = append(params, player.RefreshToken)
 		paramCounter++
 	}
-	if player.RefreshTokenExpiry != 0 {
+	if !player.RefreshTokenExpiry.IsZero() {
 		query += " refresh_token_expiry = $" + fmt.Sprint(paramCounter) + ","
 		params = append(params, player.RefreshTokenExpiry)
 		paramCounter++
