@@ -1,11 +1,14 @@
 "use client";
 import useAuthStore from "@/stores/useAuthStore";
-import React from "react";
+import React, { useEffect } from "react";
 
 const JoinGameOverlay: React.FC<{ children: React.ReactNode }> = ({
   children,
 }) => {
+  const [isHydrated, setIsHydrated] = React.useState(false);
   const { user, joinGame } = useAuthStore();
+
+  useEffect(() => { setIsHydrated(true) }, []);
 
   const handleJoin = (e: React.FormEvent) => {
     e.preventDefault();
@@ -16,7 +19,7 @@ const JoinGameOverlay: React.FC<{ children: React.ReactNode }> = ({
     }
   };
 
-  if (user) {
+  if (user || !isHydrated) {
     return null;
   }
 

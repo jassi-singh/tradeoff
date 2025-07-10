@@ -1,8 +1,10 @@
 package domain
 
 type Player struct {
-	Id       string `json:"id"`
-	Username string `json:"username"`
+	Id                 string `json:"id"`
+	Username           string `json:"username"`
+	RefreshToken       string `json:"-"`
+	RefreshTokenExpiry int64  `json:"-"`
 }
 
 type PriceData struct {

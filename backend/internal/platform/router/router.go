@@ -6,8 +6,8 @@ import (
 	"tradeoff/backend/internal/handler"
 
 	"github.com/go-chi/chi/v5"
-	"github.com/go-chi/cors"
 	"github.com/go-chi/chi/v5/middleware"
+	"github.com/go-chi/cors"
 )
 
 func NewRouter(h *handler.Handler) *chi.Mux {
@@ -26,8 +26,9 @@ func NewRouter(h *handler.Handler) *chi.Mux {
 
 	appRouter := chi.NewRouter()
 
-	appRouter.Post("/player", h.CreatePlayer)
+	appRouter.Post("/login", h.Login)
 	appRouter.Get("/player/{id}", h.GetPlayer)
+	// appRouter.Post("/buy", h.Buy)
 
 	router.Mount("/api", appRouter)
 
@@ -35,3 +36,4 @@ func NewRouter(h *handler.Handler) *chi.Mux {
 
 	return router
 }
+

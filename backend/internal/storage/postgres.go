@@ -23,3 +23,4 @@ func NewPostgresStore(config config.Config) (*PostgresStore, error) {
 
 	return &PostgresStore{DB: db}, nil
 }
+

@@ -17,6 +17,10 @@ type Config struct {
 	Server struct {
 		Port string `mapstructure:"port"`
 	} `mapstructure:"server"`
+	JWT struct {
+		Secret     string `mapstructure:"secret"`
+		Expiration int64  `mapstructure:"expiration"`
+	} `mapstructure:"jwt"`
 }
 
 func LoadConfig() (*Config, error) {

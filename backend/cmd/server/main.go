@@ -26,6 +26,7 @@ func main() {
 		log.Fatal("Failed to connect to database: ", err)
 	}
 	playerService := service.NewPlayerService(store)
+	authService := service.NewAuthService(store, config.JWT.Secret, config.JWT.Expiration)
 
 	hub := service.NewHub()
 	go hub.Run()
@@ -34,7 +35,7 @@ func main() {
 	roundManager := service.NewRoundManager(hub, marketService)
 	go roundManager.Run()
 
-	handler := handler.NewHandler(playerService, hub, roundManager)
+	handler := handler.NewHandler(playerService, hub, roundManager, authService)
 	router := router.NewRouter(handler)
 
 	log.Printf("TradeOff Game Server starting on port %s...", config.Server.Port)
