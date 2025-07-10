@@ -28,7 +28,6 @@ func NewRouter(h *handler.Handler) *chi.Mux {
 
 	appRouter.Post("/login", h.Login)
 	appRouter.Get("/player/{id}", h.GetPlayer)
-	// appRouter.Post("/buy", h.Buy)
 
 	router.Mount("/api", appRouter)
 
@@ -36,4 +35,3 @@ func NewRouter(h *handler.Handler) *chi.Mux {
 
 	return router
 }
-
