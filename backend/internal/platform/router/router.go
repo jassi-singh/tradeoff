@@ -4,9 +4,10 @@ import (
 	"net/http"
 
 	"tradeoff/backend/internal/handler"
+	platformMiddleware "tradeoff/backend/internal/middleware"
 
 	"github.com/go-chi/chi/v5"
-	"github.com/go-chi/chi/v5/middleware"
+	chiMiddleware "github.com/go-chi/chi/v5/middleware"
 	"github.com/go-chi/cors"
 )
 
@@ -17,7 +18,7 @@ func NewRouter(h *handler.Handler) *chi.Mux {
 		AllowedOrigins: []string{"*"},
 	}))
 
-	router.Use(middleware.Logger)
+	router.Use(chiMiddleware.Logger)
 
 	router.Get("/", func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
@@ -27,7 +28,7 @@ func NewRouter(h *handler.Handler) *chi.Mux {
 	appRouter := chi.NewRouter()
 
 	appRouter.Post("/login", h.Login)
-	appRouter.Get("/player/{id}", h.GetPlayer)
+	appRouter.With(platformMiddleware.AuthMiddleware).Get("/player/{id}", h.GetPlayer)
 
 	router.Mount("/api", appRouter)
 
