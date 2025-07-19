@@ -11,6 +11,9 @@ const (
 	WsMessageTypeChartData   WsMessageType = "chart_data"
 	WsMessageTypeRoundStatus WsMessageType = "round_status"
 	WsMessageTypeGameState   WsMessageType = "game_state"
+
+	// user msgs
+	WsMessageTypePositionUpdate WsMessageType = "position_update"
 )
 
 type WsMessage struct {
@@ -24,7 +27,7 @@ type DirectMessage struct {
 }
 
 type Hub struct {
-	Clients    map[*Client]bool
+	Clients    map[string]*Client
 	Broadcast  chan WsMessage
 	Register   chan *Client
 	Unregister chan *Client
@@ -33,7 +36,7 @@ type Hub struct {
 
 func NewHub() *Hub {
 	return &Hub{
-		Clients:    make(map[*Client]bool),
+		Clients:    make(map[string]*Client),
 		Broadcast:  make(chan WsMessage),
 		Register:   make(chan *Client),
 		Unregister: make(chan *Client),
@@ -45,23 +48,23 @@ func (h *Hub) Run() {
 	for {
 		select {
 		case client := <-h.Register:
-			h.Clients[client] = true
+			h.Clients[client.PlayerId] = client
 			log.Println("Client registered", client.PlayerId)
 
 		case client := <-h.Unregister:
-			if _, ok := h.Clients[client]; ok {
-				delete(h.Clients, client)
+			if _, ok := h.Clients[client.PlayerId]; ok {
+				delete(h.Clients, client.PlayerId)
 				close(client.send)
 				log.Println("Client unregistered", client.PlayerId)
 			}
 
 		case message := <-h.Broadcast:
-			for client := range h.Clients {
+			for _,client := range h.Clients {
 				select {
 				case client.send <- message:
 				default:
-					close(client.send)
-					delete(h.Clients, client)
+					close(client.send) // TODO: check if this is correct
+					delete(h.Clients, client.PlayerId)
 				}
 			}
 		case directMessage := <-h.SendDirect:

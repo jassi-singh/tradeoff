@@ -130,8 +130,8 @@ func (r *RoundManager) CreatePlayerSession(playerID string) {
 		PlayerId:        playerID,
 		RoundID:         r.roundID,
 		Balance:         StartingBalance,
-		ActivePosition:  domain.Position{},
-		ClosedPositions: []domain.Position{},
+		ActivePosition:  nil,
+		ClosedPositions: []domain.ClosedPosition{},
 	}
 	r.playerSessions[playerID] = session
 	log.Printf("Created player session for %s with balance %.2f in round %s", playerID, StartingBalance, r.roundID)
@@ -142,8 +142,8 @@ func (r *RoundManager) ResetAllPlayers() {
 	for playerID := range r.playerSessions {
 		session := r.playerSessions[playerID]
 		session.Balance = StartingBalance
-		session.ActivePosition = domain.Position{}
-		session.ClosedPositions = []domain.Position{}
+		session.ActivePosition = nil
+		session.ClosedPositions = []domain.ClosedPosition{}
 		session.RoundID = r.roundID
 		r.playerSessions[playerID] = session
 		log.Printf("Reset player %s: balance=%.2f, positions=0", playerID, StartingBalance)
@@ -304,29 +304,34 @@ func (r *RoundManager) runLivePhase() {
 			Data: priceData,
 		}
 		r.hub.Broadcast <- msg
+		r.sendActivePositionUpdate()
 		i++
 	}
 	log.Println("--- Live Phase Finished ---")
 }
 
-func (r *RoundManager) CreatePosition(playerID string, positionType *domain.PositionType) (*domain.Position, error) {
+func (r *RoundManager) CreatePosition(playerID string, positionType *domain.PositionType) (*domain.ActivePosition, error) {
 	session, exists := r.playerSessions[playerID]
 	if !exists {
 		return nil, helpers.NewCustomError("player session not found", http.StatusNotFound)
 	}
 
-	if session.ActivePosition.Type != "" {
+	if session.ActivePosition != nil {
 		return nil, helpers.NewCustomError("position already active", http.StatusBadRequest)
 	}
 
-	session.ActivePosition = domain.Position{
-		Type:       *positionType,
-		EntryPrice: r.chartData[len(r.chartData)-1].Close,
-		EntryTime:  time.Now(),
+	session.ActivePosition = &domain.ActivePosition{
+		Position: domain.Position{
+			Type:       *positionType,
+			EntryPrice: r.chartData[len(r.chartData)-1].Close,
+			EntryTime:  time.Now(),
+		},
+		PnL:           0,
+		PnlPercentage: 0,
 	}
 
 	r.playerSessions[playerID] = session
-	return &session.ActivePosition, nil
+	return session.ActivePosition, nil
 }
 
 func (r *RoundManager) ClosePosition(playerID string) error {
@@ -335,20 +340,62 @@ func (r *RoundManager) ClosePosition(playerID string) error {
 		return helpers.NewCustomError("player session not found", http.StatusNotFound)
 	}
 
-	if session.ActivePosition.Type == "" {
+	if session.ActivePosition == nil {
 		return helpers.NewCustomError("no active position to close", http.StatusBadRequest)
 	}
 
 	exitPrice := r.chartData[len(r.chartData)-1].Close
+	profitLoss, profitLossPercentage := r.calculatePnl(exitPrice, session.ActivePosition.EntryPrice, session.ActivePosition.Type)
 
-	session.ActivePosition.ExitPrice = exitPrice
-	session.ActivePosition.ExitTime = time.Now()
-	session.ActivePosition.Profit = exitPrice - session.ActivePosition.EntryPrice
-	session.ActivePosition.ProfitPercentage = (session.ActivePosition.Profit / session.ActivePosition.EntryPrice) * 100
+	closedPosition := domain.ClosedPosition{
+		Position:             session.ActivePosition.Position,
+		ExitPrice:            exitPrice,
+		ExitTime:             time.Now(),
+		ProfitLoss:           profitLoss,
+		ProfitLossPercentage: profitLossPercentage,
+	}
 
-	session.ClosedPositions = append(session.ClosedPositions, session.ActivePosition)
-	session.ActivePosition = domain.Position{}
+	session.ClosedPositions = append(session.ClosedPositions, closedPosition)
+	session.ActivePosition = nil
 
 	r.playerSessions[playerID] = session
 	return nil
+}
+
+func (r *RoundManager) sendActivePositionUpdate() {
+	for _, playerSession := range r.playerSessions {
+		if playerSession.ActivePosition != nil {
+
+			currentPrice := r.chartData[len(r.chartData)-1].Close
+			pnl, pnlPercentage := r.calculatePnl(currentPrice, playerSession.ActivePosition.EntryPrice, playerSession.ActivePosition.Type)
+
+			playerSession.ActivePosition.PnL = pnl
+			playerSession.ActivePosition.PnlPercentage = pnlPercentage
+
+			msg := WsMessage{
+				Type: WsMessageTypePositionUpdate,
+				Data: playerSession.ActivePosition,
+			}
+
+			client, exists := r.hub.Clients[playerSession.PlayerId]
+			if !exists {
+				continue
+			}
+
+			directMsg := DirectMessage{
+				Client:  client,
+				Message: msg,
+			}
+			r.hub.SendDirect <- directMsg
+		}
+	}
+}
+
+func (r *RoundManager) calculatePnl(currentPrice float64, entryPrice float64, positionType domain.PositionType) (float64, float64) {
+	pnl := currentPrice - entryPrice
+	if positionType == domain.PositionTypeShort {
+		pnl = pnl * -1
+	}
+	pnlPercentage := (pnl / entryPrice) * 100
+	return pnl, pnlPercentage
 }
