@@ -11,6 +11,7 @@ interface AuthStore {
     refreshAuthToken: () => Promise<string | null>;
     logout: () => void;
     isTokenExpired: () => boolean;
+    initializeAuth: () => void;
 }
 
 const useAuthStore = create<AuthStore>()(
@@ -23,9 +24,12 @@ const useAuthStore = create<AuthStore>()(
                 try {
                     const response = await apiService.login(username)
                     set({ user: response.user, token: response.token, refreshToken: response.refreshToken });
+                    // Set token in API service
+                    apiService.setToken(response.token);
                 } catch (error) {
                     console.error("Failed to join game:", error);
                     set({ user: null, token: null, refreshToken: null });
+                    apiService.setToken("");
                 }
             },
             refreshAuthToken: async (): Promise<string | null> => {
@@ -33,6 +37,7 @@ const useAuthStore = create<AuthStore>()(
                 if (!refreshToken) {
                     console.error("No refresh token available");
                     set({ user: null, token: null, refreshToken: null });
+                    apiService.setToken("");
                     return null;
                 }
 
@@ -43,17 +48,21 @@ const useAuthStore = create<AuthStore>()(
                         token: response.token,
                         refreshToken: response.refreshToken 
                     });
+                    // Set token in API service
+                    apiService.setToken(response.token);
                     return response.token;
                 } catch (error) {
                     console.error("Failed to refresh token:", error);
                     // Clear auth state if refresh fails
                     set({ user: null, token: null, refreshToken: null });
+                    apiService.setToken("");
                     return null;
                 }
             },
             logout: () => {
                 set({ user: null, token: null, refreshToken: null });
-                },
+                apiService.setToken("");
+            },
             isTokenExpired: () => {
                 const { token } = get();
                 if (!token) return true;
@@ -68,6 +77,12 @@ const useAuthStore = create<AuthStore>()(
                 } catch (error) {
                     console.error("Error checking token expiration:", error);
                     return true; // Consider invalid tokens as expired
+                }
+            },
+            initializeAuth: () => {
+                const { token } = get();
+                if (token) {
+                    apiService.setToken(token);
                 }
             }
         }),

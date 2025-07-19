@@ -6,15 +6,20 @@ import { useWsStore } from "@/stores/useWsStore";
 import { useEffect } from "react";
 
 const Provider = ({ children }: { children: React.ReactNode }) => {
-  const { user, token, isTokenExpired, refreshAuthToken, refreshToken } =
-    useAuthStore();
+  const {
+    user,
+    token,
+    isTokenExpired,
+    refreshAuthToken,
+    refreshToken,
+    initializeAuth,
+  } = useAuthStore();
   const { connect, disconnect } = useWsStore();
 
+  // Initialize auth on mount
   useEffect(() => {
-    if (token) {
-      apiService.setToken(token);
-    }
-  }, [token]);
+    initializeAuth();
+  }, [initializeAuth]);
 
   useEffect(() => {
     if (isTokenExpired() && refreshToken) {
