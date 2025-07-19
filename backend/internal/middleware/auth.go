@@ -9,7 +9,7 @@ import (
 	"tradeoff/backend/internal/helpers"
 )
 
-const PlayerIDKey = "player_id"
+const PlayerIDKey = "userId"
 
 func AuthMiddleware(config *config.Config) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {

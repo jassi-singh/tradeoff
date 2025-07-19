@@ -2,6 +2,8 @@ package service
 
 import (
 	"context"
+	cryptorand "crypto/rand"
+	"fmt"
 	"log"
 	"math/rand/v2"
 	"time"
@@ -13,10 +15,12 @@ type RoundManager struct {
 	marketService  *MarketService
 	phase          domain.Phase
 	phaseCountDown int
+	roundID        string
 	chartDataChan  chan []domain.PriceData
 	chartData      []domain.PriceData
 	hourlyDataChan chan []domain.PriceData
 	hourlyData     []domain.PriceData
+	playerSessions map[string]domain.PlayerSession
 }
 
 const (
@@ -34,6 +38,7 @@ func NewRoundManager(hub *Hub, marketService *MarketService) *RoundManager {
 		marketService:  marketService,
 		chartDataChan:  make(chan []domain.PriceData),
 		hourlyDataChan: make(chan []domain.PriceData),
+		playerSessions: make(map[string]domain.PlayerSession),
 	}
 }
 
@@ -57,6 +62,7 @@ func (r *RoundManager) Run() {
 func (r *RoundManager) GetGameState() map[string]any {
 	return map[string]any{
 		"phase":        r.phase,
+		"roundID":      r.roundID,
 		"chartData":    r.chartData,
 		"phaseEndTime": time.Now().Add(time.Duration(r.phaseCountDown) * time.Second),
 	}
@@ -94,6 +100,7 @@ func (r *RoundManager) transitionToLive() {
 
 	data := map[string]any{
 		"phase":         r.phase,
+		"roundID":       r.roundID,
 		"nextPhaseTime": time.Now().Add(LiveDuration),
 	}
 	r.broadcastRoundStatus(data)
@@ -108,6 +115,7 @@ func (r *RoundManager) transitionToCooldown() {
 
 	data := map[string]any{
 		"phase":         r.phase,
+		"roundID":       r.roundID,
 		"nextPhaseTime": time.Now().Add(CooldownDuration),
 	}
 	r.broadcastRoundStatus(data)
@@ -117,11 +125,13 @@ func (r *RoundManager) transitionToLobby() {
 	log.Println("--- Transitioning to Lobby Phase ---")
 	r.phase = domain.Lobby
 	r.phaseCountDown = int(LobbyDuration.Seconds())
+	r.roundID = generateUUID()
 
 	r.loadMarketData()
 
 	data := map[string]any{
 		"phase":         r.phase,
+		"roundID":       r.roundID,
 		"nextPhaseTime": time.Now().Add(LobbyDuration),
 	}
 	r.broadcastRoundStatus(data)
@@ -148,6 +158,15 @@ func (r *RoundManager) broadcastRoundStatus(data map[string]any) {
 		Data: data,
 	}
 	r.hub.Broadcast <- msg
+}
+
+func generateUUID() string {
+	b := make([]byte, 16)
+	_, err := cryptorand.Read(b)
+	if err != nil {
+		return ""
+	}
+	return fmt.Sprintf("%x-%x-%x-%x-%x", b[0:4], b[4:6], b[6:8], b[8:10], b[10:])
 }
 
 func truncateToDate(t time.Time) time.Time {
@@ -236,4 +255,48 @@ func (r *RoundManager) runLivePhase() {
 		i++
 	}
 	log.Println("--- Live Phase Finished ---")
+}
+
+func (r *RoundManager) CreatePosition(playerID string, positionType *domain.PositionType) error {
+	session, exists := r.playerSessions[playerID]
+	if !exists {
+		return fmt.Errorf("player session not found")
+	}
+
+	if session.ActivePosition.Type != "" {
+		return fmt.Errorf("player already has an active position")
+	}
+
+	session.ActivePosition = domain.Position{
+		Type:       *positionType,
+		EntryPrice: r.chartData[len(r.chartData)-1].Close,
+		EntryTime:  time.Now(),
+	}
+
+	r.playerSessions[playerID] = session
+	return nil
+}
+
+func (r *RoundManager) ClosePosition(playerID string) error {
+	session, exists := r.playerSessions[playerID]
+	if !exists {
+		return fmt.Errorf("player session not found")
+	}
+
+	if session.ActivePosition.Type == "" {
+		return fmt.Errorf("no active position to close")
+	}
+
+	exitPrice := r.chartData[len(r.chartData)-1].Close
+
+	session.ActivePosition.ExitPrice = exitPrice
+	session.ActivePosition.ExitTime = time.Now()
+	session.ActivePosition.Profit = exitPrice - session.ActivePosition.EntryPrice
+	session.ActivePosition.ProfitPercentage = (session.ActivePosition.Profit / session.ActivePosition.EntryPrice) * 100
+
+	session.ClosedPositions = append(session.ClosedPositions, session.ActivePosition)
+	session.ActivePosition = domain.Position{}
+
+	r.playerSessions[playerID] = session
+	return nil
 }

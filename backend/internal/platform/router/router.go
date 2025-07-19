@@ -5,6 +5,7 @@ import (
 
 	"tradeoff/backend/internal/config"
 	"tradeoff/backend/internal/handler"
+	"tradeoff/backend/internal/middleware"
 
 	"github.com/go-chi/chi/v5"
 	chiMiddleware "github.com/go-chi/chi/v5/middleware"
@@ -29,6 +30,9 @@ func NewRouter(h *handler.Handler, config *config.Config) *chi.Mux {
 
 	appRouter.Post("/login", h.Login)
 	appRouter.Post("/refresh", h.RefreshToken)
+
+	appRouter.With(middleware.AuthMiddleware(h.Config)).Post("/position", h.CreatePosition)
+	appRouter.With(middleware.AuthMiddleware(h.Config)).Post("/close-position", h.ClosePosition)
 
 	router.Mount("/api", appRouter)
 

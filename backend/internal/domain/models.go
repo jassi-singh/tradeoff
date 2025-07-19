@@ -25,3 +25,28 @@ const (
 	Live   Phase = "live"
 	Closed Phase = "closed"
 )
+
+type PositionType string
+
+const (
+	PositionTypeLong  PositionType = "long"
+	PositionTypeShort PositionType = "short"
+)
+
+type Position struct {
+	Type 			 PositionType
+	EntryPrice       float64
+	EntryTime        time.Time
+	ExitPrice        float64
+	ExitTime         time.Time
+	Profit           float64
+	ProfitPercentage float64
+}
+
+type PlayerSession struct {
+	PlayerId        string
+	RoundID         string
+	Balance         float64
+	ActivePosition  Position
+	ClosedPositions []Position
+}
