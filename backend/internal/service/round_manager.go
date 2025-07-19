@@ -30,6 +30,7 @@ const (
 	HourlyDataForDays = 10
 	RoundDuration     = LobbyDuration + LiveDuration + CooldownDuration
 	Ticker            = "X:BTCUSD"
+	StartingBalance   = 100.0
 )
 
 func NewRoundManager(hub *Hub, marketService *MarketService) *RoundManager {
@@ -61,10 +62,11 @@ func (r *RoundManager) Run() {
 
 func (r *RoundManager) GetGameState() map[string]any {
 	return map[string]any{
-		"phase":        r.phase,
-		"roundID":      r.roundID,
-		"chartData":    r.chartData,
-		"phaseEndTime": time.Now().Add(time.Duration(r.phaseCountDown) * time.Second),
+		"phase":          r.phase,
+		"roundID":        r.roundID,
+		"chartData":      r.chartData,
+		"phaseEndTime":   time.Now().Add(time.Duration(r.phaseCountDown) * time.Second),
+		"playerSessions": r.playerSessions,
 	}
 }
 
@@ -121,11 +123,56 @@ func (r *RoundManager) transitionToCooldown() {
 	r.broadcastRoundStatus(data)
 }
 
+func (r *RoundManager) CreatePlayerSession(playerID string) {
+	session := domain.PlayerSession{
+		PlayerId:        playerID,
+		RoundID:         r.roundID,
+		Balance:         StartingBalance,
+		ActivePosition:  domain.Position{},
+		ClosedPositions: []domain.Position{},
+	}
+	r.playerSessions[playerID] = session
+	log.Printf("Created player session for %s with balance %.2f in round %s", playerID, StartingBalance, r.roundID)
+}
+
+func (r *RoundManager) ResetAllPlayers() {
+	log.Println("--- Resetting all player balances and positions ---")
+	for playerID := range r.playerSessions {
+		session := r.playerSessions[playerID]
+		session.Balance = StartingBalance
+		session.ActivePosition = domain.Position{}
+		session.ClosedPositions = []domain.Position{}
+		session.RoundID = r.roundID
+		r.playerSessions[playerID] = session
+		log.Printf("Reset player %s: balance=%.2f, positions=0", playerID, StartingBalance)
+	}
+}
+
+func (r *RoundManager) GetPlayerSessionOrCreate(playerID string) domain.PlayerSession {
+	session, exists := r.playerSessions[playerID]
+	if !exists {
+		r.CreatePlayerSession(playerID)
+		session = r.playerSessions[playerID]
+	}
+	return session
+}
+
+func (r *RoundManager) GetActivePlayerCount() int {
+	return len(r.playerSessions)
+}
+
 func (r *RoundManager) transitionToLobby() {
 	log.Println("--- Transitioning to Lobby Phase ---")
 	r.phase = domain.Lobby
 	r.phaseCountDown = int(LobbyDuration.Seconds())
 	r.roundID = generateUUID()
+
+	// Reset all existing players for the new round
+	playerCount := r.GetActivePlayerCount()
+	if playerCount > 0 {
+		r.ResetAllPlayers()
+		log.Printf("Reset %d players for new round %s", playerCount, r.roundID)
+	}
 
 	r.loadMarketData()
 
@@ -211,6 +258,25 @@ func (r *RoundManager) loadHourlyChartData(randomDecrease int) {
 	r.hourlyDataChan <- hourlyData
 }
 
+func (r *RoundManager) processPriceData(priceData domain.PriceData) {
+	if len(r.chartData) == 0 {
+		r.chartData = append(r.chartData, priceData)
+	} else {
+		lastChartData := &r.chartData[len(r.chartData)-1]
+		lastDataTime := time.Unix(lastChartData.Time, 0)
+		priceDataTime := time.Unix(priceData.Time, 0)
+
+		if lastDataTime.Day() != priceDataTime.Day() {
+			r.chartData = append(r.chartData, priceData)
+		} else {
+			lastChartData.High = max(lastChartData.High, priceData.High)
+			lastChartData.Low = min(lastChartData.Low, priceData.Low)
+			lastChartData.Close = priceData.Close
+			lastChartData.Volume += priceData.Volume
+		}
+	}
+}
+
 func (r *RoundManager) runLivePhase() {
 	log.Println("--- Running Live Phase ---")
 	if len(r.hourlyData) == 0 {
@@ -229,23 +295,7 @@ func (r *RoundManager) runLivePhase() {
 		}
 
 		priceData := r.hourlyData[i]
-
-		if len(r.chartData) == 0 {
-			r.chartData = append(r.chartData, priceData)
-		} else {
-			lastChartData := &r.chartData[len(r.chartData)-1]
-			lastDataTime := time.Unix(lastChartData.Time, 0)
-			priceDataTime := time.Unix(priceData.Time, 0)
-
-			if lastDataTime.Day() != priceDataTime.Day() {
-				r.chartData = append(r.chartData, priceData)
-			} else {
-				lastChartData.High = max(lastChartData.High, priceData.High)
-				lastChartData.Low = min(lastChartData.Low, priceData.Low)
-				lastChartData.Close = priceData.Close
-				lastChartData.Volume += priceData.Volume
-			}
-		}
+		r.processPriceData(priceData)
 
 		msg := WsMessage{
 			Type: WsMessageTypePriceUpdate,

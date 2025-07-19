@@ -49,6 +49,9 @@ func (h *Handler) HandleWebSocket(w http.ResponseWriter, r *http.Request) {
 
 	client := service.NewClient(conn, h.Hub, playerId)
 
+	// Get player session if it exists, otherwise create it
+	h.RoundManager.GetPlayerSessionOrCreate(playerId)
+
 	go client.ReadPump()
 	go client.WritePump()
 
