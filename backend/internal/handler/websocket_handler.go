@@ -4,7 +4,6 @@ import (
 	"log"
 	"net/http"
 	"net/url"
-	"tradeoff/backend/internal/config"
 	"tradeoff/backend/internal/helpers"
 	"tradeoff/backend/internal/service"
 
@@ -34,16 +33,8 @@ func (h *Handler) HandleWebSocket(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Load config to get JWT secret
-	conf, err := config.LoadConfig()
-	if err != nil {
-		log.Printf("WebSocket connection rejected: config error - %v", err)
-		http.Error(w, "Server configuration error", http.StatusInternalServerError)
-		return
-	}
-
-	// Validate token and extract player ID
-	playerId, err := helpers.ValidateJWTAndGetPlayerID(token, conf.JWT.Secret)
+	// Validate token and extract player ID using injected config
+	playerId, err := helpers.ValidateJWTAndGetPlayerID(token, h.Config.JWT.Secret)
 	if err != nil {
 		log.Printf("WebSocket connection rejected: invalid token - %v", err)
 		http.Error(w, "Invalid token", http.StatusUnauthorized)

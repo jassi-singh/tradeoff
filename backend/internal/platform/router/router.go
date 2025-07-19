@@ -3,6 +3,7 @@ package router
 import (
 	"net/http"
 
+	"tradeoff/backend/internal/config"
 	"tradeoff/backend/internal/handler"
 	platformMiddleware "tradeoff/backend/internal/middleware"
 
@@ -11,7 +12,7 @@ import (
 	"github.com/go-chi/cors"
 )
 
-func NewRouter(h *handler.Handler) *chi.Mux {
+func NewRouter(h *handler.Handler, config *config.Config) *chi.Mux {
 	router := chi.NewRouter()
 
 	router.Use(cors.Handler(cors.Options{
@@ -29,7 +30,7 @@ func NewRouter(h *handler.Handler) *chi.Mux {
 
 	appRouter.Post("/login", h.Login)
 	appRouter.Post("/refresh", h.RefreshToken)
-	appRouter.With(platformMiddleware.AuthMiddleware).Get("/player/{id}", h.GetPlayer)
+	appRouter.With(platformMiddleware.AuthMiddleware(config)).Get("/player/{id}", h.GetPlayer)
 
 	router.Mount("/api", appRouter)
 

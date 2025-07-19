@@ -11,35 +11,30 @@ import (
 
 const PlayerIDKey = "player_id"
 
-func AuthMiddleware(next http.Handler) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		// Load config to get JWT secret
-		conf, err := config.LoadConfig()
-		if err != nil {
-			http.Error(w, "Server configuration error", http.StatusInternalServerError)
-			return
-		}
+func AuthMiddleware(config *config.Config) func(http.Handler) http.Handler {
+	return func(next http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			authHeader := r.Header.Get("Authorization")
+			if authHeader == "" {
+				http.Error(w, "Missing Authorization header", http.StatusUnauthorized)
+				return
+			}
 
-		authHeader := r.Header.Get("Authorization")
-		if authHeader == "" {
-			http.Error(w, "Missing Authorization header", http.StatusUnauthorized)
-			return
-		}
+			parts := strings.Split(authHeader, " ")
+			if len(parts) != 2 || parts[0] != "Bearer" {
+				http.Error(w, "Invalid Authorization header format", http.StatusUnauthorized)
+				return
+			}
 
-		parts := strings.Split(authHeader, " ")
-		if len(parts) != 2 || parts[0] != "Bearer" {
-			http.Error(w, "Invalid Authorization header format", http.StatusUnauthorized)
-			return
-		}
+			tokenStr := parts[1]
+			playerID, err := helpers.ValidateJWTAndGetPlayerID(tokenStr, config.JWT.Secret)
+			if err != nil {
+				http.Error(w, "Invalid token", http.StatusUnauthorized)
+				return
+			}
 
-		tokenStr := parts[1]
-		playerID, err := helpers.ValidateJWTAndGetPlayerID(tokenStr, conf.JWT.Secret)
-		if err != nil {
-			http.Error(w, "Invalid token", http.StatusUnauthorized)
-			return
-		}
-
-		ctx := context.WithValue(r.Context(), PlayerIDKey, playerID)
-		next.ServeHTTP(w, r.WithContext(ctx))
-	})
+			ctx := context.WithValue(r.Context(), PlayerIDKey, playerID)
+			next.ServeHTTP(w, r.WithContext(ctx))
+		})
+	}
 }
