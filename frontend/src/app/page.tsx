@@ -1,7 +1,4 @@
 import JoinGameOverlay from "@/components/overlay/JoinGameOverlay";
-import Leaderboard from "@/components/Leaderboard";
-import PortfolioBalance from "@/components/PortfolioBalance";
-import PortfolioGraph from "@/components/PortfolioGraph";
 import OverlayChildren from "@/components/overlay/OverlayChildren";
 import ChartComponent from "@/components/CandlestickChart";
 import { GameInfo } from "@/components/GameInfo";
@@ -20,9 +17,6 @@ export default function Home() {
             <ChartComponent />
           </div>
           <div className="flex-[1] flex flex-col gap-4">
-            <PortfolioBalance />
-            <PortfolioGraph />
-            <Leaderboard />
           </div>
         </div>
       </div>

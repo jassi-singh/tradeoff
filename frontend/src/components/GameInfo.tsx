@@ -52,24 +52,22 @@ export const GameInfo = () => {
   };
 
   return (
-    <div className="mb-4 p-4 bg-gray-800 rounded-lg">
-      <div className="flex justify-between items-center">
-        <div className="flex items-center gap-4">
-          <div className="text-sm">
-            Game Phase:{" "}
-            <span className={`font-bold ${getPhaseColor(phase)}`}>
-              {phase.toUpperCase()}
-            </span>
-          </div>
-          <div className="text-sm">
-            Status:{" "}
-            <span className={`font-bold ${getStatusColor(status)}`}>
-              {getStatusText(status)}
-            </span>
-          </div>
+    <div className="flex justify-between items-center z-10 w-full absolute top-0 left-0 bg-black/10 backdrop-blur-sm p-4 text-white">
+      <div className="flex items-center gap-4">
+        <div className="text-sm">
+          Game Phase:{" "}
+          <span className={`font-bold ${getPhaseColor(phase)}`}>
+            {phase.toUpperCase()}
+          </span>
         </div>
-        <Timer />
+        <div className="text-sm">
+          Status:{" "}
+          <span className={`font-bold ${getStatusColor(status)}`}>
+            {getStatusText(status)}
+          </span>
+        </div>
       </div>
+      <Timer />
     </div>
   );
 };
