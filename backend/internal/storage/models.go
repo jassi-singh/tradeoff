@@ -7,7 +7,7 @@ import (
 // PlayerModel represents the GORM model for the players table
 type PlayerModel struct {
 	ID                 string    `gorm:"type:uuid;primary_key;default:gen_random_uuid()" json:"id"`
-	Username           string    `gorm:"type:varchar(255);not null;uniqueIndex" json:"username"`
+	Username           string    `gorm:"type:varchar(255);not null" json:"username"`
 	RefreshToken       string    `gorm:"type:text" json:"-"`
 	RefreshTokenExpiry time.Time `gorm:"type:timestamp" json:"-"`
 	CreatedAt          time.Time `gorm:"autoCreateTime" json:"created_at"`

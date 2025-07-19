@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"net/http"
 	"tradeoff/backend/internal/domain"
+	"tradeoff/backend/internal/helpers"
 )
 
 type positionRequest struct {
@@ -18,21 +19,22 @@ func (h *Handler) CreatePosition(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Parse the request body to get position details
-	var position positionRequest
-	if err := json.NewDecoder(r.Body).Decode(&position); err != nil {
-		http.Error(w, "Invalid request body", http.StatusBadRequest)
+	// Parse the request body to get positionReq details
+	var positionReq positionRequest
+	if err := json.NewDecoder(r.Body).Decode(&positionReq); err != nil {
+		helpers.RespondWithError(w, err)
 		return
 	}
 
 	// Create the position using the RoundManager
-	if err := h.RoundManager.CreatePosition(userID, &position.Type); err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+	position, err := h.RoundManager.CreatePosition(userID, &positionReq.Type)
+	if err != nil {
+		helpers.RespondWithError(w, err)
 		return
 	}
 
-	w.WriteHeader(http.StatusCreated)
-	json.NewEncoder(w).Encode(position)
+	helpers.RespondWithJSON(w, http.StatusCreated, position)
+
 }
 
 func (h *Handler) ClosePosition(w http.ResponseWriter, r *http.Request) {

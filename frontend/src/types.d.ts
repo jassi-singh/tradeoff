@@ -9,6 +9,19 @@ export interface UserWithToken {
     refreshToken: string;
 }
 
+// Position types
+export type PositionType = "long" | "short";
+
+export interface Position {
+    type: PositionType;
+    entryPrice: number;
+    entryTime: string; // ISO date string
+    exitPrice?: number;
+    exitTime?: string; // ISO date string
+    profit?: number;
+    profitPercentage?: number;
+}
+
 // New types for WebSocket messages
 import { CandlestickData } from "lightweight-charts";
 
@@ -43,4 +56,14 @@ interface GameStateMessage {
     };
 }
 
-export type WebSocketMessage = PriceUpdateMessage | ChartDataMessage | RoundStatusMessage | GameStateMessage;
+interface PositionUpdateMessage {
+    type: "position_update";
+    data: Position;
+}
+
+interface PositionClosedMessage {
+    type: "position_closed";
+    data: Position;
+}
+
+export type WebSocketMessage = PriceUpdateMessage | ChartDataMessage | RoundStatusMessage | GameStateMessage | PositionUpdateMessage | PositionClosedMessage;

@@ -6,8 +6,10 @@ import (
 	"fmt"
 	"log"
 	"math/rand/v2"
+	"net/http"
 	"time"
 	"tradeoff/backend/internal/domain"
+	"tradeoff/backend/internal/helpers"
 )
 
 type RoundManager struct {
@@ -307,14 +309,14 @@ func (r *RoundManager) runLivePhase() {
 	log.Println("--- Live Phase Finished ---")
 }
 
-func (r *RoundManager) CreatePosition(playerID string, positionType *domain.PositionType) error {
+func (r *RoundManager) CreatePosition(playerID string, positionType *domain.PositionType) (*domain.Position, error) {
 	session, exists := r.playerSessions[playerID]
 	if !exists {
-		return fmt.Errorf("player session not found")
+		return nil, helpers.NewCustomError("player session not found", http.StatusNotFound)
 	}
 
 	if session.ActivePosition.Type != "" {
-		return fmt.Errorf("player already has an active position")
+		return nil, helpers.NewCustomError("position already active", http.StatusBadRequest)
 	}
 
 	session.ActivePosition = domain.Position{
@@ -324,17 +326,17 @@ func (r *RoundManager) CreatePosition(playerID string, positionType *domain.Posi
 	}
 
 	r.playerSessions[playerID] = session
-	return nil
+	return &session.ActivePosition, nil
 }
 
 func (r *RoundManager) ClosePosition(playerID string) error {
 	session, exists := r.playerSessions[playerID]
 	if !exists {
-		return fmt.Errorf("player session not found")
+		return helpers.NewCustomError("player session not found", http.StatusNotFound)
 	}
 
 	if session.ActivePosition.Type == "" {
-		return fmt.Errorf("no active position to close")
+		return helpers.NewCustomError("no active position to close", http.StatusBadRequest)
 	}
 
 	exitPrice := r.chartData[len(r.chartData)-1].Close

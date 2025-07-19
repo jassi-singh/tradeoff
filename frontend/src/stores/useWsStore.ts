@@ -1,19 +1,18 @@
-import { websocketConnect } from "@/api"
+import apiService from "@/api"
 import { create } from "zustand"
 import { useGameStore } from "./useGameStore"
-import useAuthStore from "./useAuthStore"
 
 type WsStore = {
     ws: WebSocket | null
     status: "connecting" | "connected" | "disconnected" | "error"
-    connect: (token?: string) => void
+    connect: () => void
     disconnect: () => void
 }
 
 export const useWsStore = create<WsStore>((set, get) => ({
     ws: null,
     status: "disconnected",
-    connect: async (providedToken?: string) => {
+    connect: async () => {
         const { status, ws: existingWs } = get();
         
         // Don't start new connection if already connecting or connected
@@ -28,31 +27,8 @@ export const useWsStore = create<WsStore>((set, get) => ({
 
         set({ status: "connecting" });
 
-        let token: string | null = providedToken || null;
-        
-        // Get token from auth store if not provided
-        if (!token) {
-            const authState = useAuthStore.getState();
-            token = authState.token;
-            
-            // Check if token is expired and refresh if needed
-            if (!token || authState.isTokenExpired(token)) {
-                token = await authState.refreshAuthToken();
-                
-                if (!token) {
-                    set({ status: "error" });
-                    return;
-                }
-            }
-        }
-
-        if (!token) {
-            set({ status: "error" });
-            return;
-        }
-
         try {
-            const ws = websocketConnect(token);
+            const ws = await apiService.websocketConnect();
             set({ ws });
 
             ws.addEventListener("open", () => {

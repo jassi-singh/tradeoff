@@ -1,4 +1,4 @@
-import { login, refreshToken as apiRefreshToken } from "@/api";
+import apiService from "@/api";
 import { User } from "@/types";
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
@@ -10,7 +10,7 @@ interface AuthStore {
     joinGame: (username: string) => Promise<void>;
     refreshAuthToken: () => Promise<string | null>;
     logout: () => void;
-    isTokenExpired: (token: string) => boolean;
+    isTokenExpired: () => boolean;
 }
 
 const useAuthStore = create<AuthStore>()(
@@ -21,7 +21,7 @@ const useAuthStore = create<AuthStore>()(
             refreshToken: null,
             joinGame: async (username: string) => {
                 try {
-                    const response = await login(username)
+                    const response = await apiService.login(username)
                     set({ user: response.user, token: response.token, refreshToken: response.refreshToken });
                 } catch (error) {
                     console.error("Failed to join game:", error);
@@ -37,10 +37,10 @@ const useAuthStore = create<AuthStore>()(
                 }
 
                 try {
-                    const response = await apiRefreshToken(refreshToken);
+                    const response = await apiService.refreshToken(refreshToken);
                     set({ 
                         user: response.user, 
-                        token: response.token, 
+                        token: response.token,
                         refreshToken: response.refreshToken 
                     });
                     return response.token;
@@ -53,8 +53,9 @@ const useAuthStore = create<AuthStore>()(
             },
             logout: () => {
                 set({ user: null, token: null, refreshToken: null });
-            },
-            isTokenExpired: (token: string): boolean => {
+                },
+            isTokenExpired: () => {
+                const { token } = get();
                 if (!token) return true;
                 
                 try {
