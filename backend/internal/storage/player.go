@@ -1,78 +1,103 @@
 package storage
 
 import (
-	"fmt"
-	"log"
 	"tradeoff/backend/internal/domain"
+
+	"gorm.io/gorm"
 )
 
+// Helper function to convert PlayerModel to domain.Player
+func (pm *PlayerModel) ToDomain() domain.Player {
+	return domain.Player{
+		Id:                 pm.ID,
+		Username:           pm.Username,
+		RefreshToken:       pm.RefreshToken,
+		RefreshTokenExpiry: pm.RefreshTokenExpiry,
+	}
+}
+
+// Helper function to convert domain.Player to PlayerModel
+func FromDomain(player domain.Player) PlayerModel {
+	return PlayerModel{
+		ID:                 player.Id,
+		Username:           player.Username,
+		RefreshToken:       player.RefreshToken,
+		RefreshTokenExpiry: player.RefreshTokenExpiry,
+	}
+}
+
 func (s *PostgresStore) CreatePlayer(player domain.Player) (domain.Player, error) {
-	// Let the database auto-generate the UUID
-	query := `INSERT INTO public.players (username, refresh_token, refresh_token_expiry) VALUES ($1, $2, $3) RETURNING id`
-	var id string
-	err := s.DB.QueryRow(query, player.Username, player.RefreshToken, player.RefreshTokenExpiry).Scan(&id)
-	if err != nil {
-		log.Println("Error creating player:", err)
+	// Convert domain player to GORM model
+	playerModel := FromDomain(player)
+
+	// Let GORM handle the UUID generation
+	playerModel.ID = ""
+
+	// Create the player
+	if err := s.DB.Create(&playerModel).Error; err != nil {
 		return domain.Player{}, err
 	}
 
-	player.Id = id
-	return player, nil
+	// Return the created player with generated ID
+	return playerModel.ToDomain(), nil
 }
 
 func (s *PostgresStore) FindPlayerByRefreshToken(refreshToken string) (domain.Player, error) {
-	query := `SELECT id, username, refresh_token, refresh_token_expiry FROM public.players WHERE refresh_token = $1`
-	var player domain.Player
-	err := s.DB.QueryRow(query, refreshToken).Scan(&player.Id, &player.Username, &player.RefreshToken, &player.RefreshTokenExpiry)
+	var playerModel PlayerModel
+	err := s.DB.Where("refresh_token = ?", refreshToken).First(&playerModel).Error
 	if err != nil {
-		return domain.Player{}, fmt.Errorf("failed to find player by refresh token: %w", err)
+		if err == gorm.ErrRecordNotFound {
+			return domain.Player{}, gorm.ErrRecordNotFound
+		}
+		return domain.Player{}, err
 	}
-	return player, nil
+
+	return playerModel.ToDomain(), nil
 }
 
 func (s *PostgresStore) UpdatePlayer(player domain.Player) (domain.Player, error) {
-	// Initialize the base query and parameters
-	query := "UPDATE public.players SET"
-	params := []any{}
-	paramCounter := 1
+	var playerModel PlayerModel
 
-	// Dynamically build the query based on provided fields
+	// Find the existing player
+	if err := s.DB.Where("id = ?", player.Id).First(&playerModel).Error; err != nil {
+		return domain.Player{}, err
+	}
+
+	// Update only non-zero fields
+	updates := make(map[string]interface{})
+
 	if player.Username != "" {
-		query += " username = $" + fmt.Sprint(paramCounter) + ","
-		params = append(params, player.Username)
-		paramCounter++
+		updates["username"] = player.Username
 	}
 	if player.RefreshToken != "" {
-		query += " refresh_token = $" + fmt.Sprint(paramCounter) + ","
-		params = append(params, player.RefreshToken)
-		paramCounter++
+		updates["refresh_token"] = player.RefreshToken
 	}
 	if !player.RefreshTokenExpiry.IsZero() {
-		query += " refresh_token_expiry = $" + fmt.Sprint(paramCounter) + ","
-		params = append(params, player.RefreshTokenExpiry)
-		paramCounter++
+		updates["refresh_token_expiry"] = player.RefreshTokenExpiry
 	}
 
-	// Remove the trailing comma and add the WHERE clause
-	query = query[:len(query)-1] + " WHERE id = $" + fmt.Sprint(paramCounter) + " RETURNING id, username, refresh_token, refresh_token_expiry"
-	params = append(params, player.Id)
-
-	// Execute the query
-	updatedPlayer := domain.Player{}
-	err := s.DB.QueryRow(query, params...).Scan(&updatedPlayer.Id, &updatedPlayer.Username, &updatedPlayer.RefreshToken, &updatedPlayer.RefreshTokenExpiry)
-	if err != nil {
-		return domain.Player{}, fmt.Errorf("failed to update player: %w", err)
+	// Perform the update
+	if err := s.DB.Model(&playerModel).Updates(updates).Error; err != nil {
+		return domain.Player{}, err
 	}
 
-	return updatedPlayer, nil
+	// Reload the updated player from database
+	if err := s.DB.Where("id = ?", player.Id).First(&playerModel).Error; err != nil {
+		return domain.Player{}, err
+	}
+
+	return playerModel.ToDomain(), nil
 }
 
 func (s *PostgresStore) GetPlayer(id string) (domain.Player, error) {
-	query := `SELECT id, username, refresh_token, refresh_token_expiry FROM public.players WHERE id = $1`
-	var player domain.Player
-	err := s.DB.QueryRow(query, id).Scan(&player.Id, &player.Username, &player.RefreshToken, &player.RefreshTokenExpiry)
+	var playerModel PlayerModel
+	err := s.DB.Where("id = ?", id).First(&playerModel).Error
 	if err != nil {
+		if err == gorm.ErrRecordNotFound {
+			return domain.Player{}, gorm.ErrRecordNotFound
+		}
 		return domain.Player{}, err
 	}
-	return player, nil
+
+	return playerModel.ToDomain(), nil
 }

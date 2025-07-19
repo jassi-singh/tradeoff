@@ -1,26 +1,49 @@
 package storage
 
 import (
-	"database/sql"
 	"tradeoff/backend/internal/config"
 
-	_ "github.com/jackc/pgx/v5/stdlib"
+	"gorm.io/driver/postgres"
+	"gorm.io/gorm"
+	"gorm.io/gorm/logger"
 )
 
 type PostgresStore struct {
-	DB *sql.DB
+	DB *gorm.DB
 }
 
 func NewPostgresStore(config config.Config) (*PostgresStore, error) {
-	db, err := sql.Open("pgx", config.Database.URL)
+	// Configure GORM with PostgreSQL driver
+	db, err := gorm.Open(postgres.Open(config.Database.URL), &gorm.Config{
+		Logger: logger.Default.LogMode(logger.Info),
+	})
 	if err != nil {
 		return nil, err
 	}
 
-	if err := db.Ping(); err != nil {
+	// Get the underlying SQL DB for ping check
+	sqlDB, err := db.DB()
+	if err != nil {
 		return nil, err
 	}
 
-	return &PostgresStore{DB: db}, nil
+	if err := sqlDB.Ping(); err != nil {
+		return nil, err
+	}
+
+	store := &PostgresStore{DB: db}
+
+	// Auto-migrate models
+	if err := store.AutoMigrate(); err != nil {
+		return nil, err
+	}
+
+	return store, nil
 }
 
+// AutoMigrate runs auto-migration for all models
+func (s *PostgresStore) AutoMigrate() error {
+	return s.DB.AutoMigrate(
+		&PlayerModel{},
+	)
+}
