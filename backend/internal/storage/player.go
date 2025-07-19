@@ -7,12 +7,16 @@ import (
 )
 
 func (s *PostgresStore) CreatePlayer(player domain.Player) (domain.Player, error) {
-	query := `INSERT INTO public.players (username, refresh_token, refresh_token_expiry) VALUES ($1, $2, $3) RETURNING id, username, refresh_token, refresh_token_expiry`
-	err := s.DB.QueryRow(query, player.Username, player.RefreshToken, player.RefreshTokenExpiry).Scan(&player.Id, &player.Username, &player.RefreshToken, &player.RefreshTokenExpiry)
+	// Let the database auto-generate the UUID
+	query := `INSERT INTO public.players (username, refresh_token, refresh_token_expiry) VALUES ($1, $2, $3) RETURNING id`
+	var id string
+	err := s.DB.QueryRow(query, player.Username, player.RefreshToken, player.RefreshTokenExpiry).Scan(&id)
 	if err != nil {
 		log.Println("Error creating player:", err)
 		return domain.Player{}, err
 	}
+
+	player.Id = id
 	return player, nil
 }
 
@@ -66,7 +70,7 @@ func (s *PostgresStore) UpdatePlayer(player domain.Player) (domain.Player, error
 func (s *PostgresStore) GetPlayer(id string) (domain.Player, error) {
 	query := `SELECT id, username, refresh_token, refresh_token_expiry FROM public.players WHERE id = $1`
 	var player domain.Player
-	err := s.DB.QueryRow(query, id).Scan(&player.Id, &player.Username)
+	err := s.DB.QueryRow(query, id).Scan(&player.Id, &player.Username, &player.RefreshToken, &player.RefreshTokenExpiry)
 	if err != nil {
 		return domain.Player{}, err
 	}

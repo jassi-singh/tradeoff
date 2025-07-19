@@ -36,19 +36,23 @@ func (s *AuthService) Login(payload LoginParams) (UserWithToken, error) {
 		Username: payload.Username,
 	}
 
-	token, err := s.generateToken(player)
-	if err != nil {
-		return UserWithToken{}, err
-	}
 	refreshToken, err := s.generateRefreshToken()
 	if err != nil {
 		return UserWithToken{}, err
 	}
 	player.RefreshToken = refreshToken
 	player.RefreshTokenExpiry = time.Now().Add(24 * time.Hour)
+
+	// Create player in database first to get the UUID
 	player, err = s.playerRepository.CreatePlayer(player)
 	if err != nil {
 		return UserWithToken{}, fmt.Errorf("failed to create player: %w", err)
+	}
+
+	// Now generate token with the player that has an ID
+	token, err := s.generateToken(player)
+	if err != nil {
+		return UserWithToken{}, err
 	}
 
 	return UserWithToken{
@@ -97,18 +101,21 @@ func (s *AuthService) RefreshToken(refreshToken string) (UserWithToken, error) {
 }
 
 func (s *AuthService) generateToken(user domain.Player) (string, error) {
+	now := time.Now().Unix()
 	claims := jwt.MapClaims{
 		"sub":  user.Id,
 		"name": user.Username,
-		"exp":  s.jwtExpiration,
-		"iat":  time.Now().Unix(),
+		"exp":  now + s.jwtExpiration, // Set expiration as current time + duration
+		"iat":  now,
 	}
+
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
 	tokenString, err := token.SignedString([]byte(s.jwtSecret))
 	if err != nil {
 		log.Println("Failed to sign JWT token", err)
 		return "", err
 	}
+
 	return tokenString, nil
 }
 

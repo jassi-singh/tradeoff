@@ -5,18 +5,20 @@ import { useWsStore } from "@/stores/useWsStore";
 import { useEffect } from "react";
 
 const Provider = ({ children }: { children: React.ReactNode }) => {
-  const { user } = useAuthStore();
+  const { user, token } = useAuthStore();
   const { connect, disconnect } = useWsStore();
 
   useEffect(() => {
-    if (user) {
-      connect(user.id);
+    if (user && token) {
+      connect();
+    } else {
+      disconnect();
     }
 
     return () => {
       disconnect();
     };
-  }, [user, connect, disconnect]);
+  }, [user, token, connect, disconnect]);
 
   return <>{children}</>;
 };

@@ -28,6 +28,7 @@ func NewRouter(h *handler.Handler) *chi.Mux {
 	appRouter := chi.NewRouter()
 
 	appRouter.Post("/login", h.Login)
+	appRouter.Post("/refresh", h.RefreshToken)
 	appRouter.With(platformMiddleware.AuthMiddleware).Get("/player/{id}", h.GetPlayer)
 
 	router.Mount("/api", appRouter)

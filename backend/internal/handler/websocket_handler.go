@@ -3,6 +3,7 @@ package handler
 import (
 	"log"
 	"net/http"
+	"net/url"
 	"tradeoff/backend/internal/config"
 	"tradeoff/backend/internal/helpers"
 	"tradeoff/backend/internal/service"
@@ -18,10 +19,18 @@ var upgrader = websocket.Upgrader{
 
 func (h *Handler) HandleWebSocket(w http.ResponseWriter, r *http.Request) {
 	// Get token from query parameter
-	token := r.URL.Query().Get("token")
-	if token == "" {
+	encodedToken := r.URL.Query().Get("token")
+	if encodedToken == "" {
 		log.Println("WebSocket connection rejected: missing token")
 		http.Error(w, "Missing token", http.StatusUnauthorized)
+		return
+	}
+
+	// URL decode the token
+	token, err := url.QueryUnescape(encodedToken)
+	if err != nil {
+		log.Printf("WebSocket connection rejected: failed to decode token - %v", err)
+		http.Error(w, "Invalid token encoding", http.StatusBadRequest)
 		return
 	}
 
