@@ -5,7 +5,6 @@ import (
 
 	"tradeoff/backend/internal/config"
 	"tradeoff/backend/internal/handler"
-	platformMiddleware "tradeoff/backend/internal/middleware"
 
 	"github.com/go-chi/chi/v5"
 	chiMiddleware "github.com/go-chi/chi/v5/middleware"
@@ -30,7 +29,6 @@ func NewRouter(h *handler.Handler, config *config.Config) *chi.Mux {
 
 	appRouter.Post("/login", h.Login)
 	appRouter.Post("/refresh", h.RefreshToken)
-	appRouter.With(platformMiddleware.AuthMiddleware(config)).Get("/player/{id}", h.GetPlayer)
 
 	router.Mount("/api", appRouter)
 

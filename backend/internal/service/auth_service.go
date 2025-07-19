@@ -23,6 +23,10 @@ type AuthService struct {
 	jwtExpiration    int64
 }
 
+type LoginParams struct {
+	Username string `json:"username"`
+}
+
 func NewAuthService(playerRepository PlayerRepository, jwtSecret string, jwtExpiration int64) *AuthService {
 	return &AuthService{
 		playerRepository: playerRepository,
