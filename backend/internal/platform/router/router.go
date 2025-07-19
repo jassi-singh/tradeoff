@@ -15,10 +15,14 @@ import (
 func NewRouter(h *handler.Handler, config *config.Config) *chi.Mux {
 	router := chi.NewRouter()
 
-	router.Use(cors.Handler(cors.Options{
+	// CORS configuration
+	corsMiddleware := cors.Handler(cors.Options{
 		AllowedOrigins: []string{"*"},
-	}))
+		AllowedMethods: []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
+		AllowedHeaders: []string{"Accept", "Authorization", "Content-Type", "X-CSRF-Token"},
+	})
 
+	router.Use(corsMiddleware)
 	router.Use(chiMiddleware.Logger)
 
 	router.Get("/", func(w http.ResponseWriter, r *http.Request) {

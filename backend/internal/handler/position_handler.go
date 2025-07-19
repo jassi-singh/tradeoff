@@ -15,7 +15,7 @@ func (h *Handler) CreatePosition(w http.ResponseWriter, r *http.Request) {
 	// Extract user ID from context
 	userID, ok := r.Context().Value("userId").(string)
 	if !ok {
-		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		helpers.RespondWithError(w, helpers.NewCustomError("Unauthorized", http.StatusUnauthorized))
 		return
 	}
 
@@ -41,13 +41,13 @@ func (h *Handler) ClosePosition(w http.ResponseWriter, r *http.Request) {
 	// Extract user ID from context
 	userID, ok := r.Context().Value("userId").(string)
 	if !ok {
-		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		helpers.RespondWithError(w, helpers.NewCustomError("Unauthorized", http.StatusUnauthorized))
 		return
 	}
 
 	// Close the position using the RoundManager
 	if err := h.RoundManager.ClosePosition(userID); err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		helpers.RespondWithError(w, err)
 		return
 	}
 
