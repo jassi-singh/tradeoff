@@ -72,8 +72,8 @@ The following endpoints are available under the `/api` prefix.
 
 ### WebSocket API
 
-- `GET /ws?playerId={id}`
-  - Upgrades the connection to a WebSocket to receive real-time game updates. The `playerId` is used to associate the connection with a player.
+- `GET /ws?token={jwt_token}`
+  - Upgrades the connection to a WebSocket to receive real-time game updates. The `token` is a JWT access token used to authenticate and associate the connection with a player.
 
 ---
 

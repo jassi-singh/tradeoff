@@ -3,6 +3,8 @@ package helpers
 import (
 	"encoding/json"
 	"net/http"
+
+	"github.com/golang-jwt/jwt/v5"
 )
 
 type CustomError struct {
@@ -41,3 +43,35 @@ func RespondWithJSON(w http.ResponseWriter, status int, data interface{}) {
 	w.Write(response)
 }
 
+// ValidateJWTAndGetPlayerID validates a JWT token and returns the player ID
+func ValidateJWTAndGetPlayerID(tokenStr, jwtSecret string) (string, error) {
+	// Parse and validate the token
+	token, err := jwt.Parse(tokenStr, func(token *jwt.Token) (interface{}, error) {
+		// Validate the signing method
+		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
+			return nil, jwt.ErrSignatureInvalid
+		}
+		return []byte(jwtSecret), nil
+	})
+	if err != nil {
+		return "", err
+	}
+
+	if !token.Valid {
+		return "", jwt.ErrTokenMalformed
+	}
+
+	// Extract claims
+	claims, ok := token.Claims.(jwt.MapClaims)
+	if !ok {
+		return "", jwt.ErrInvalidKey
+	}
+
+	// Get player ID from claims
+	playerID, ok := claims["sub"].(string)
+	if !ok || playerID == "" {
+		return "", jwt.ErrInvalidKey
+	}
+
+	return playerID, nil
+}

@@ -3,6 +3,8 @@ package handler
 import (
 	"log"
 	"net/http"
+	"tradeoff/backend/internal/config"
+	"tradeoff/backend/internal/helpers"
 	"tradeoff/backend/internal/service"
 
 	"github.com/gorilla/websocket"
@@ -15,6 +17,29 @@ var upgrader = websocket.Upgrader{
 }
 
 func (h *Handler) HandleWebSocket(w http.ResponseWriter, r *http.Request) {
+	// Get token from query parameter
+	token := r.URL.Query().Get("token")
+	if token == "" {
+		log.Println("WebSocket connection rejected: missing token")
+		http.Error(w, "Missing token", http.StatusUnauthorized)
+		return
+	}
+
+	// Load config to get JWT secret
+	conf, err := config.LoadConfig()
+	if err != nil {
+		log.Printf("WebSocket connection rejected: config error - %v", err)
+		http.Error(w, "Server configuration error", http.StatusInternalServerError)
+		return
+	}
+
+	// Validate token and extract player ID
+	playerId, err := helpers.ValidateJWTAndGetPlayerID(token, conf.JWT.Secret)
+	if err != nil {
+		log.Printf("WebSocket connection rejected: invalid token - %v", err)
+		http.Error(w, "Invalid token", http.StatusUnauthorized)
+		return
+	}
 
 	conn, err := upgrader.Upgrade(w, r, nil)
 	if err != nil {
@@ -22,7 +47,7 @@ func (h *Handler) HandleWebSocket(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	client := service.NewClient(conn, h.Hub, r.URL.Query().Get("playerId"))
+	client := service.NewClient(conn, h.Hub, playerId)
 
 	go client.ReadPump()
 	go client.WritePump()
@@ -41,4 +66,3 @@ func (h *Handler) HandleWebSocket(w http.ResponseWriter, r *http.Request) {
 	h.Hub.SendDirect <- directMessage
 	h.Hub.Register <- client
 }
-

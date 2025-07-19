@@ -65,9 +65,7 @@ func (h *Hub) Run() {
 				}
 			}
 		case directMessage := <-h.SendDirect:
-			select {
-			case directMessage.Client.send <- directMessage.Message:
-			}
+			directMessage.Client.send <- directMessage.Message
 		}
 
 	}
