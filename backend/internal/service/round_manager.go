@@ -286,7 +286,6 @@ func (r *RoundManager) loadDailyChartData(randomDecrease int) {
 		r.chartDataChan <- nil
 		return
 	}
-	log.Printf("Loaded %d daily chart data points", len(chartData))
 	r.chartDataChan <- chartData
 }
 
@@ -302,7 +301,6 @@ func (r *RoundManager) loadHourlyChartData(randomDecrease int) {
 		r.hourlyDataChan <- nil
 		return
 	}
-	log.Printf("Loaded %d hourly chart data points", len(hourlyData))
 	r.hourlyDataChan <- hourlyData
 }
 
