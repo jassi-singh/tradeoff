@@ -49,16 +49,13 @@ func (h *Handler) HandleWebSocket(w http.ResponseWriter, r *http.Request) {
 
 	client := service.NewClient(conn, h.Hub, playerId)
 
-	// Get player session if it exists, otherwise create it
-	h.RoundManager.GetPlayerSessionOrCreate(playerId)
-
 	go client.ReadPump()
 	go client.WritePump()
 
 	rm := h.RoundManager
 	wsMessage := service.WsMessage{
-		Type: service.WsMessageTypeGameState,
-		Data: rm.GetGameState(),
+		Type: service.WsMsgTypeGameStateSync,
+		Data: rm.GetGameState(playerId),
 	}
 
 	directMessage := service.DirectMessage{

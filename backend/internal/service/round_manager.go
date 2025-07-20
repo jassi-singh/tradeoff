@@ -22,7 +22,7 @@ type RoundManager struct {
 	chartData      []domain.PriceData
 	hourlyDataChan chan []domain.PriceData
 	hourlyData     []domain.PriceData
-	playerSessions map[string]domain.PlayerSession
+	playerSessions map[string]domain.PlayerState
 }
 
 const (
@@ -41,7 +41,7 @@ func NewRoundManager(hub *Hub, marketService *MarketService) *RoundManager {
 		marketService:  marketService,
 		chartDataChan:  make(chan []domain.PriceData),
 		hourlyDataChan: make(chan []domain.PriceData),
-		playerSessions: make(map[string]domain.PlayerSession),
+		playerSessions: make(map[string]domain.PlayerState),
 	}
 }
 
@@ -62,13 +62,51 @@ func (r *RoundManager) Run() {
 	}
 }
 
-func (r *RoundManager) GetGameState() map[string]any {
-	return map[string]any{
-		"phase":          r.phase,
-		"roundID":        r.roundID,
-		"chartData":      r.chartData,
-		"phaseEndTime":   time.Now().Add(time.Duration(r.phaseCountDown) * time.Second),
-		"playerSessions": r.playerSessions,
+func (r *RoundManager) GetGameState(playerId string) GameStatePayload {
+	session := r.GetPlayerSessionOrCreate(playerId)
+
+	totalRealizedPnl := 0.0
+	for _, closedPosition := range session.ClosedPositions {
+		totalRealizedPnl += closedPosition.Pnl
+	}
+	totalUnrealizedPnl := 0.0
+	if session.ActivePosition != nil {
+		totalUnrealizedPnl = session.ActivePosition.Pnl
+	}
+
+	longPositions := 0
+	shortPositions := 0
+	for _, playerSession := range r.playerSessions {
+		if playerSession.ActivePosition != nil {
+			if playerSession.ActivePosition.Type == domain.PositionTypeLong {
+				longPositions++
+			} else {
+				shortPositions++
+			}
+		}
+	}
+
+	return GameStatePayload{
+		RoundID: r.roundID,
+		ChartData: r.chartData,
+		PhaseChangePayload: PhaseChangePayload{
+			Phase:   r.phase,
+			EndTime: time.Now().Add(time.Duration(r.phaseCountDown) * time.Second),
+		},
+		CountUpdatePayload: CountUpdatePayload{
+			TotalPlayers:   r.GetActivePlayerCount(),
+			LongPositions:  longPositions,
+			ShortPositions: shortPositions,
+		},
+		BasePlayerState: domain.BasePlayerState{
+			Balance:         session.Balance,
+			ActivePosition:  session.ActivePosition,
+			ClosedPositions: session.ClosedPositions,
+		},
+		PnlUpdatePayload: PnlUpdatePayload{
+			TotalRealizedPnl:   totalRealizedPnl,
+			TotalUnrealizedPnl: totalUnrealizedPnl,
+		},
 	}
 }
 
@@ -102,12 +140,11 @@ func (r *RoundManager) transitionToLive() {
 		return
 	}
 
-	data := map[string]any{
-		"phase":         r.phase,
-		"roundID":       r.roundID,
-		"nextPhaseTime": time.Now().Add(LiveDuration),
+	data := PhaseChangePayload{
+		Phase:   r.phase,
+		EndTime: time.Now().Add(LiveDuration),
 	}
-	r.broadcastRoundStatus(data)
+	r.broadcastPhaseUpdate(data)
 
 	go r.runLivePhase()
 }
@@ -117,21 +154,21 @@ func (r *RoundManager) transitionToCooldown() {
 	r.phase = domain.Closed
 	r.phaseCountDown = int(CooldownDuration.Seconds())
 
-	data := map[string]any{
-		"phase":         r.phase,
-		"roundID":       r.roundID,
-		"nextPhaseTime": time.Now().Add(CooldownDuration),
+	data := PhaseChangePayload{
+		Phase:   r.phase,
+		EndTime: time.Now().Add(CooldownDuration),
 	}
-	r.broadcastRoundStatus(data)
+	r.broadcastPhaseUpdate(data)
 }
 
 func (r *RoundManager) CreatePlayerSession(playerID string) {
-	session := domain.PlayerSession{
-		PlayerId:        playerID,
-		RoundID:         r.roundID,
-		Balance:         StartingBalance,
-		ActivePosition:  nil,
-		ClosedPositions: []domain.ClosedPosition{},
+	session := domain.PlayerState{
+		PlayerId: playerID,
+		BasePlayerState: domain.BasePlayerState{
+			Balance:         StartingBalance,
+			ActivePosition:  nil,
+			ClosedPositions: []domain.ClosedPosition{},
+		},
 	}
 	r.playerSessions[playerID] = session
 	log.Printf("Created player session for %s with balance %.2f in round %s", playerID, StartingBalance, r.roundID)
@@ -144,13 +181,12 @@ func (r *RoundManager) ResetAllPlayers() {
 		session.Balance = StartingBalance
 		session.ActivePosition = nil
 		session.ClosedPositions = []domain.ClosedPosition{}
-		session.RoundID = r.roundID
 		r.playerSessions[playerID] = session
 		log.Printf("Reset player %s: balance=%.2f, positions=0", playerID, StartingBalance)
 	}
 }
 
-func (r *RoundManager) GetPlayerSessionOrCreate(playerID string) domain.PlayerSession {
+func (r *RoundManager) GetPlayerSessionOrCreate(playerID string) domain.PlayerState {
 	session, exists := r.playerSessions[playerID]
 	if !exists {
 		r.CreatePlayerSession(playerID)
@@ -178,32 +214,47 @@ func (r *RoundManager) transitionToLobby() {
 
 	r.loadMarketData()
 
-	data := map[string]any{
-		"phase":         r.phase,
-		"roundID":       r.roundID,
-		"nextPhaseTime": time.Now().Add(LobbyDuration),
+	data := PhaseChangePayload{
+		Phase:   r.phase,
+		EndTime: time.Now().Add(LobbyDuration),
 	}
-	r.broadcastRoundStatus(data)
+	r.broadcastPhaseUpdate(data)
 
 	r.chartData = <-r.chartDataChan
 	r.hourlyData = <-r.hourlyDataChan
 
 	log.Printf("Loaded %d daily chart data and %d hourly data", len(r.chartData), len(r.hourlyData))
 
-	data = map[string]any{
-		"chartData": r.chartData,
+	gameState := GameStatePayload{
+		RoundID:            r.roundID,
+		ChartData:          r.chartData,
+		PhaseChangePayload: data,
+		CountUpdatePayload: CountUpdatePayload{
+			TotalPlayers:   r.GetActivePlayerCount(),
+			LongPositions:  0,
+			ShortPositions: 0,
+		},
+		BasePlayerState: domain.BasePlayerState{
+			Balance:         StartingBalance,
+			ActivePosition:  nil,
+			ClosedPositions: []domain.ClosedPosition{},
+		},
+		PnlUpdatePayload: PnlUpdatePayload{
+			TotalRealizedPnl:   0,
+			TotalUnrealizedPnl: 0,
+		},
 	}
 
 	r.hub.Broadcast <- WsMessage{
-		Type: WsMessageTypeChartData,
-		Data: data,
+		Type: WsMsgTypeNewRound,
+		Data: gameState,
 	}
 
 }
 
-func (r *RoundManager) broadcastRoundStatus(data map[string]any) {
+func (r *RoundManager) broadcastPhaseUpdate(data PhaseChangePayload) {
 	msg := WsMessage{
-		Type: WsMessageTypeRoundStatus,
+		Type: WsMsgTypePhaseUpdate,
 		Data: data,
 	}
 	r.hub.Broadcast <- msg
@@ -260,7 +311,8 @@ func (r *RoundManager) loadHourlyChartData(randomDecrease int) {
 	r.hourlyDataChan <- hourlyData
 }
 
-func (r *RoundManager) processPriceData(priceData domain.PriceData) {
+func (r *RoundManager) sendPriceUpdate(priceData domain.PriceData) {
+	updateLast := false
 	if len(r.chartData) == 0 {
 		r.chartData = append(r.chartData, priceData)
 	} else {
@@ -271,12 +323,23 @@ func (r *RoundManager) processPriceData(priceData domain.PriceData) {
 		if lastDataTime.Day() != priceDataTime.Day() {
 			r.chartData = append(r.chartData, priceData)
 		} else {
+			updateLast = true
 			lastChartData.High = max(lastChartData.High, priceData.High)
 			lastChartData.Low = min(lastChartData.Low, priceData.Low)
 			lastChartData.Close = priceData.Close
 			lastChartData.Volume += priceData.Volume
 		}
 	}
+
+	lastChartData := r.chartData[len(r.chartData)-1]
+	msg := WsMessage{
+		Type: WsMsgTypePriceUpdate,
+		Data: PriceUpdate{
+			PriceData:  lastChartData,
+			UpdateLast: updateLast,
+		},
+	}
+	r.hub.Broadcast <- msg
 }
 
 func (r *RoundManager) runLivePhase() {
@@ -297,20 +360,15 @@ func (r *RoundManager) runLivePhase() {
 		}
 
 		priceData := r.hourlyData[i]
-		r.processPriceData(priceData)
+		r.sendPriceUpdate(priceData)
 
-		msg := WsMessage{
-			Type: WsMessageTypePriceUpdate,
-			Data: priceData,
-		}
-		r.hub.Broadcast <- msg
-		r.sendActivePositionUpdate()
+		r.sendPnlUpdate()
 		i++
 	}
 	log.Println("--- Live Phase Finished ---")
 }
 
-func (r *RoundManager) CreatePosition(playerID string, positionType *domain.PositionType) (*domain.ActivePosition, error) {
+func (r *RoundManager) CreatePosition(playerID string, positionType *domain.PositionType) (*domain.Position, error) {
 	session, exists := r.playerSessions[playerID]
 	if !exists {
 		return nil, helpers.NewCustomError("player session not found", http.StatusNotFound)
@@ -320,13 +378,11 @@ func (r *RoundManager) CreatePosition(playerID string, positionType *domain.Posi
 		return nil, helpers.NewCustomError("position already active", http.StatusBadRequest)
 	}
 
-	session.ActivePosition = &domain.ActivePosition{
-		Position: domain.Position{
-			Type:       *positionType,
-			EntryPrice: r.chartData[len(r.chartData)-1].Close,
-			EntryTime:  time.Now(),
-		},
-		PnL:           0,
+	session.ActivePosition = &domain.Position{
+		Type:          *positionType,
+		EntryPrice:    r.chartData[len(r.chartData)-1].Close,
+		EntryTime:     time.Now(),
+		Pnl:           0,
 		PnlPercentage: 0,
 	}
 
@@ -348,11 +404,15 @@ func (r *RoundManager) ClosePosition(playerID string) error {
 	profitLoss, profitLossPercentage := r.calculatePnl(exitPrice, session.ActivePosition.EntryPrice, session.ActivePosition.Type)
 
 	closedPosition := domain.ClosedPosition{
-		Position:             session.ActivePosition.Position,
-		ExitPrice:            exitPrice,
-		ExitTime:             time.Now(),
-		ProfitLoss:           profitLoss,
-		ProfitLossPercentage: profitLossPercentage,
+		Position: domain.Position{
+			Type:          session.ActivePosition.Type,
+			EntryPrice:    session.ActivePosition.EntryPrice,
+			EntryTime:     session.ActivePosition.EntryTime,
+			Pnl:           profitLoss,
+			PnlPercentage: profitLossPercentage,
+		},
+		ExitPrice: exitPrice,
+		ExitTime:  time.Now(),
 	}
 
 	session.ClosedPositions = append(session.ClosedPositions, closedPosition)
@@ -362,19 +422,27 @@ func (r *RoundManager) ClosePosition(playerID string) error {
 	return nil
 }
 
-func (r *RoundManager) sendActivePositionUpdate() {
+func (r *RoundManager) sendPnlUpdate() {
 	for _, playerSession := range r.playerSessions {
 		if playerSession.ActivePosition != nil {
 
 			currentPrice := r.chartData[len(r.chartData)-1].Close
 			pnl, pnlPercentage := r.calculatePnl(currentPrice, playerSession.ActivePosition.EntryPrice, playerSession.ActivePosition.Type)
 
-			playerSession.ActivePosition.PnL = pnl
+			playerSession.ActivePosition.Pnl = pnl
 			playerSession.ActivePosition.PnlPercentage = pnlPercentage
 
+			totalRealizedPnl := 0.0
+			for _, closedPosition := range playerSession.ClosedPositions {
+				totalRealizedPnl += closedPosition.Pnl
+			}
+
 			msg := WsMessage{
-				Type: WsMessageTypePositionUpdate,
-				Data: playerSession.ActivePosition,
+				Type: WsMsgTypePnlUpdate,
+				Data: PnlUpdatePayload{
+					TotalUnrealizedPnl: playerSession.ActivePosition.Pnl,
+					TotalRealizedPnl:   totalRealizedPnl,
+				},
 			}
 
 			client, exists := r.hub.Clients[playerSession.PlayerId]

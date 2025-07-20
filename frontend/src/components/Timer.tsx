@@ -3,7 +3,7 @@ import { useGameStore } from "@/stores/useGameStore";
 import { useEffect, useState } from "react";
 
 export const Timer = () => {
-  const endTime = useGameStore((state) => state.phaseEndTime);
+  const endTime = useGameStore((state) => state.endTime);
   const [timeLeft, setTimeLeft] = useState<number | null>(null);
 
   useEffect(() => {

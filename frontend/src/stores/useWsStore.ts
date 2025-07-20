@@ -14,7 +14,7 @@ export const useWsStore = create<WsStore>((set, get) => ({
     status: "disconnected",
     connect: async () => {
         const { status, ws: existingWs } = get();
-        
+
         // Don't start new connection if already connecting or connected
         if (status === "connecting" || status === "connected") {
             return;
@@ -48,7 +48,7 @@ export const useWsStore = create<WsStore>((set, get) => ({
                     const msg = JSON.parse(event.data);
                     useGameStore.getState().handleWSMessage(msg);
                 } catch {
-                    // Ignore parsing errors
+                    console.error("Error parsing WebSocket message:", event.data);
                 }
             });
         } catch {

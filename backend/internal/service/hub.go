@@ -2,25 +2,62 @@ package service
 
 import (
 	"log"
+	"time"
+	"tradeoff/backend/internal/domain"
 )
 
-type WsMessageType string
+type WsMsgType string
 
 const (
-	WsMessageTypePriceUpdate WsMessageType = "price_update"
-	WsMessageTypeChartData   WsMessageType = "chart_data"
-	WsMessageTypeRoundStatus WsMessageType = "round_status"
-	WsMessageTypeGameState   WsMessageType = "game_state"
+	WsMsgTypeGameStateSync WsMsgType = "game_state_sync"
+	WsMsgTypeNewRound      WsMsgType = "new_round"
+	WsMsgTypePhaseUpdate   WsMsgType = "phase_update"
+	WsMsgTypePriceUpdate   WsMsgType = "price_update"
+	WsMsgTypeCountUpdate   WsMsgType = "count_update"
 
-	// user msgs
-	WsMessageTypePositionUpdate WsMessageType = "position_update"
+	WsMsgTypePnlUpdate WsMsgType = "pnl_update"
 )
 
 type WsMessage struct {
-	Type WsMessageType `json:"type"`
-	Data any           `json:"data"`
+	Type WsMsgType `json:"type"`
+	Data any       `json:"data"`
 }
 
+// GameStatePayload is the data for the 'game_state_sync' and 'new_round' messages.
+// It contains everything a client needs to render the game from scratch.
+type GameStatePayload struct {
+	RoundID   string             `json:"roundId"`
+	ChartData []domain.PriceData `json:"chartData"`
+	PhaseChangePayload
+	CountUpdatePayload
+	domain.BasePlayerState
+	PnlUpdatePayload
+}
+
+// PhaseChangePayload is the data for the 'phase_update' message.
+type PhaseChangePayload struct {
+	Phase   domain.Phase `json:"phase"`
+	EndTime time.Time    `json:"endTime"` // Unix milliseconds
+}
+
+// CountUpdatePayload is the data for the 'count_update' message.
+type CountUpdatePayload struct {
+	LongPositions  int `json:"longPositions"`
+	ShortPositions int `json:"shortPositions"`
+	TotalPlayers   int `json:"totalPlayers"`
+}
+
+// PnlUpdatePayload is the data for the 'pnl_update' message.
+// This is sent directly to a single player.
+type PnlUpdatePayload struct {
+	TotalRealizedPnl   float64 `json:"realizedPnl"`
+	TotalUnrealizedPnl float64 `json:"unrealizedPnl"`
+}
+
+type PriceUpdate struct {
+	PriceData  domain.PriceData `json:"priceData"`
+	UpdateLast bool             `json:"updateLast"`
+}
 type DirectMessage struct {
 	Client  *Client   `json:"client"`
 	Message WsMessage `json:"message"`
@@ -59,7 +96,7 @@ func (h *Hub) Run() {
 			}
 
 		case message := <-h.Broadcast:
-			for _,client := range h.Clients {
+			for _, client := range h.Clients {
 				select {
 				case client.send <- message:
 				default:

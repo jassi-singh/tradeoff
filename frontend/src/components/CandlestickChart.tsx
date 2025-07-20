@@ -13,7 +13,7 @@ import {
 import React, { useEffect, useRef } from "react";
 
 const ChartComponent: React.FC = () => {
-  const { chartPriceData: candlestickData } = useGameStore();
+  const { chartData: candlestickData } = useGameStore();
   const chartContainerRef = useRef<HTMLDivElement>(null);
   const chartRef = useRef<IChartApi | null>(null);
   const seriesRef = useRef<ISeriesApi<"Candlestick"> | null>(null);
@@ -30,10 +30,10 @@ const ChartComponent: React.FC = () => {
       },
       grid: {
         vertLines: {
-          color: "#20242f"
+          color: "#20242f",
         },
         horzLines: {
-          color: "#20242f"
+          color: "#20242f",
         },
       },
       width: chartContainerRef.current.clientWidth,

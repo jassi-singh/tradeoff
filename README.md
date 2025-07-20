@@ -18,6 +18,13 @@ This project is being built in public as a comprehensive case study in full-stac
 
 The project has completed the majority of its Phase 1 goals. The core single-player game loop is fully functional within a containerized local development environment. The backend serves real-time data via WebSockets, and the frontend displays it in an interactive chart.
 
+### Latest Features
+
+- **Position Management**: Players can now create long/short positions and close them during live trading rounds
+- **Real-time P&L Tracking**: Live profit/loss calculation based on current market prices
+- **Position Controls**: Intuitive UI for position creation and management
+- **WebSocket Integration**: Real-time position updates via WebSocket messages
+
 ---
 
 ## The Vision: A Three-Phase Architectural Journey
@@ -43,6 +50,34 @@ This project is planned to evolve through three distinct phases, demonstrating a
 - **Status:** ⏳ **Planned**
 
 _[This README will be updated with "Before vs. After" performance benchmark graphs upon completion of Phase 3.]_
+
+---
+
+## API Documentation
+
+### Position Management APIs
+
+The application includes RESTful APIs for position management:
+
+#### Create Position
+
+- **Endpoint:** `POST /api/position`
+- **Headers:** `Authorization: Bearer <token>`
+- **Body:** `{ "type": "long" | "short" }`
+- **Response:** `201 Created`
+
+#### Close Position
+
+- **Endpoint:** `POST /api/close-position`
+- **Headers:** `Authorization: Bearer <token>`
+- **Response:** `204 No Content`
+
+### WebSocket Messages
+
+The application uses WebSocket for real-time updates:
+
+- `position_update`: Sent when a position is created or updated
+- `position_closed`: Sent when a position is closed
 
 ---
 

@@ -9,61 +9,57 @@ export interface UserWithToken {
     refreshToken: string;
 }
 
-// Position types
-export type PositionType = "long" | "short";
-
-export interface Position {
-    type: PositionType;
-    entryPrice: number;
-    entryTime: string; // ISO date string
-    exitPrice?: number;
-    exitTime?: string; // ISO date string
-    profit?: number;
-    profitPercentage?: number;
-}
-
 // New types for WebSocket messages
 import { CandlestickData } from "lightweight-charts";
 
 export type GamePhase = "lobby" | "live" | "closed";
 
-interface PriceUpdateMessage {
-    type: "price_update";
-    data: CandlestickData;
+interface PnlData {
+    totalRealizedPnl: number;
+    totalUnrealizedPnl: number;
 }
 
-interface ChartDataMessage {
-    type: "chart_data";
-    data: {
-        chartData: CandlestickData[];
-    };
+interface PhaseData {
+    phase: GamePhase;
+    endTime: string;
 }
 
-interface RoundStatusMessage {
-    type: "round_status";
-    data: {
-        phase: GamePhase;
-        nextPhaseTime: string; // ISO date string
-    };
+interface CountData {
+    longPositions: number;
+    shortPositions: number;
+    totalPlayers: number;
 }
 
-interface GameStateMessage {
-    type: "game_state";
-    data: {
-        phase: GamePhase;
-        chartData: CandlestickData[];
-        phaseEndTime?: string; // ISO date string
-    };
+interface BasePlayerState {
+    balance: number;
+    activePosition: Position;
+    closedPositions: ClosedPosition[];
 }
 
-interface PositionUpdateMessage {
-    type: "position_update";
-    data: Position;
+interface Position {
+    type: PositionType;
+    entryPrice: number;
+    entryTime: string; 
+    pnl: number;
+    pnlPercentage: number;
 }
 
-interface PositionClosedMessage {
-    type: "position_closed";
-    data: Position;
+interface ClosedPosition extends Position {
+    exitPrice: number;
+    exitTime: string;
 }
 
-export type WebSocketMessage = PriceUpdateMessage | ChartDataMessage | RoundStatusMessage | GameStateMessage | PositionUpdateMessage | PositionClosedMessage;
+interface GameStateData extends PhaseData, CountData, PnlData, BasePlayerState {
+    roundId: string;
+    chartData: CandlestickData[];
+}
+
+interface PriceUpdateData {
+    priceData: CandlestickData;
+    updateLast: boolean;
+}
+
+export interface WebSocketMessage  {
+    type:  "price_update" | "pnl_update" | "phase_update" | "count_update" | "game_state_sync"| "new_round";
+    data: PriceUpdateData | PnLData | PhaseData | CountData | GameStateData 
+}

@@ -34,29 +34,26 @@ const (
 )
 
 type Position struct {
-	Type       PositionType `json:"type"`
-	EntryPrice float64      `json:"entryPrice"`
-	EntryTime  time.Time    `json:"entryTime"`
+	Type          PositionType `json:"type"`
+	EntryPrice    float64      `json:"entryPrice"`
+	EntryTime     time.Time    `json:"entryTime"`
+	Pnl           float64      `json:"Pnl"`
+	PnlPercentage float64      `json:"PnlPercentage"`
 }
 
 type ClosedPosition struct {
 	Position
-	ExitPrice        float64 `json:"exitPrice"`
-	ExitTime         time.Time `json:"exitTime"`
-	ProfitLoss       float64 `json:"profitLoss"`
-	ProfitLossPercentage float64 `json:"profitLossPercentage"`
+	ExitPrice float64   `json:"exitPrice"`
+	ExitTime  time.Time `json:"exitTime"`
 }
 
-type ActivePosition struct {
-	Position
-	PnL           float64 `json:"pnl"`
-	PnlPercentage float64 `json:"pnlPercentage"`
+type PlayerState struct {
+	PlayerId string `json:"playerId"`
+	BasePlayerState
 }
 
-type PlayerSession struct {
-	PlayerId        string          `json:"playerId"`
-	RoundID         string          `json:"roundId"`
-	Balance         float64         `json:"balance"`
-	ActivePosition  *ActivePosition `json:"activePosition"`
-	ClosedPositions []ClosedPosition      `json:"closedPositions"`
+type BasePlayerState struct {
+	Balance         float64          `json:"balance"`
+	ActivePosition  *Position        `json:"activePosition"`
+	ClosedPositions []ClosedPosition `json:"closedPositions"`
 }
