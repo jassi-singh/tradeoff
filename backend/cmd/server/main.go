@@ -1,8 +1,13 @@
 package main
 
 import (
+	"context"
 	"log"
 	"net/http"
+	"os"
+	"os/signal"
+	"syscall"
+	"time"
 
 	"tradeoff/backend/internal/config"
 	"tradeoff/backend/internal/handler"
@@ -32,15 +37,48 @@ func main() {
 
 	marketService := service.NewMarketService(hub, config.Polygon.APIKey)
 	playerService := service.NewPlayerService()
-	roundManager := service.NewRoundManager(hub, marketService, playerService)
+
+	// Create context for graceful shutdown
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	roundManager := service.NewRoundManager(ctx, hub, marketService, playerService)
 	go roundManager.Run()
 
 	handler := handler.NewHandler(hub, roundManager, authService, config, playerService)
 	router := router.NewRouter(handler, config)
 
-	log.Printf("TradeOff Game Server starting on port %s...", config.Server.Port)
-
-	if err := http.ListenAndServe(":"+config.Server.Port, router); err != nil {
-		log.Fatalf("Could not start server: %s\n", err)
+	// Create server
+	server := &http.Server{
+		Addr:    ":" + config.Server.Port,
+		Handler: router,
 	}
+
+	// Start server in a goroutine
+	go func() {
+		log.Printf("TradeOff Game Server starting on port %s...", config.Server.Port)
+		if err := server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+			log.Fatalf("Could not start server: %s\n", err)
+		}
+	}()
+
+	// Wait for interrupt signal to gracefully shutdown the server
+	quit := make(chan os.Signal, 1)
+	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
+	<-quit
+	log.Println("Shutting down server...")
+
+	// Create a deadline for server shutdown
+	ctx, cancel = context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+
+	// Shutdown RoundManager
+	roundManager.Shutdown()
+
+	// Shutdown server
+	if err := server.Shutdown(ctx); err != nil {
+		log.Fatal("Server forced to shutdown:", err)
+	}
+
+	log.Println("Server exited")
 }

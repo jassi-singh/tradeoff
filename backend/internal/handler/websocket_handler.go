@@ -53,9 +53,16 @@ func (h *Handler) HandleWebSocket(w http.ResponseWriter, r *http.Request) {
 	go client.WritePump()
 
 	rm := h.RoundManager
+	gameState, err := rm.GetGameState(playerId)
+	if err != nil {
+		log.Printf("Error getting game state for player %s: %v", playerId, err)
+		helpers.NewCustomError("error getting game state", http.StatusInternalServerError)
+		return
+	}
+
 	wsMessage := service.WsMessage{
 		Type: service.WsMsgTypeGameStateSync,
-		Data: rm.GetGameState(playerId),
+		Data: gameState,
 	}
 
 	directMessage := service.DirectMessage{

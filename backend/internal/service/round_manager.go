@@ -6,11 +6,13 @@ import (
 	"fmt"
 	"log"
 	"math/rand/v2"
+	"sync"
 	"time"
 	"tradeoff/backend/internal/domain"
 )
 
 type RoundManager struct {
+	mu             sync.RWMutex
 	hub            *Hub
 	marketService  *MarketService
 	playerService  *PlayerService
@@ -21,6 +23,8 @@ type RoundManager struct {
 	chartData      []domain.PriceData
 	hourlyDataChan chan []domain.PriceData
 	hourlyData     []domain.PriceData
+	ctx            context.Context
+	cancel         context.CancelFunc
 }
 
 const (
@@ -33,50 +37,79 @@ const (
 	StartingBalance   = 100.0
 )
 
-func NewRoundManager(hub *Hub, marketService *MarketService, playerService *PlayerService) *RoundManager {
+func NewRoundManager(ctx context.Context, hub *Hub, marketService *MarketService, playerService *PlayerService) *RoundManager {
+	rmCtx, cancel := context.WithCancel(ctx)
 	rm := &RoundManager{
 		hub:            hub,
 		marketService:  marketService,
 		playerService:  playerService,
 		chartDataChan:  make(chan []domain.PriceData),
 		hourlyDataChan: make(chan []domain.PriceData),
+		ctx:            rmCtx,
+		cancel:         cancel,
 	}
 
 	rm.transitionToLobby()
 	return rm
 }
 
+// Shutdown gracefully stops the round manager
+func (r *RoundManager) Shutdown() {
+	log.Println("Shutting down RoundManager...")
+	r.cancel()
+}
+
 func (r *RoundManager) Run() {
 	timer := time.NewTicker(1 * time.Second)
 	defer timer.Stop()
 
-	for range timer.C {
-		if time.Now().After(r.phaseEndTime) {
-			switch r.phase {
-			case domain.Lobby:
-				r.transitionToLive()
-			case domain.Live:
-				r.transitionToCooldown()
-			case domain.Closed:
-				r.transitionToLobby()
+	for {
+		select {
+		case <-r.ctx.Done():
+			log.Println("RoundManager context cancelled, stopping...")
+			return
+		case <-timer.C:
+			r.mu.RLock()
+			phaseEndTime := r.phaseEndTime
+			currentPhase := r.phase
+			r.mu.RUnlock()
+
+			if time.Now().After(phaseEndTime) {
+				switch currentPhase {
+				case domain.Lobby:
+					r.transitionToLive()
+				case domain.Live:
+					r.transitionToCooldown()
+				case domain.Closed:
+					r.transitionToLobby()
+				}
 			}
 		}
 	}
 }
 
-func (r *RoundManager) GetGameState(playerId string) GameStatePayload {
+func (r *RoundManager) GetGameState(playerId string) (GameStatePayload, error) {
+	if playerId == "" {
+		return GameStatePayload{}, fmt.Errorf("player ID cannot be empty")
+	}
+
+	r.mu.RLock()
+	roundID := r.roundID
+	chartData := r.chartData
+	phase := r.phase
+	phaseEndTime := r.phaseEndTime
+	r.mu.RUnlock()
+
 	session := r.playerService.GetPlayerSessionOrCreate(playerId)
-
 	totalRealizedPnl, totalUnrealizedPnl := r.playerService.GetPlayerPnlData(playerId)
-
 	longPositions, shortPositions := r.playerService.GetPositionsCount()
 
 	return GameStatePayload{
-		RoundID:   r.roundID,
-		ChartData: r.chartData,
+		RoundID:   roundID,
+		ChartData: chartData,
 		PhaseChangePayload: PhaseChangePayload{
-			Phase:   r.phase,
-			EndTime: r.phaseEndTime,
+			Phase:   phase,
+			EndTime: phaseEndTime,
 		},
 		CountUpdatePayload: CountUpdatePayload{
 			TotalPlayers:   r.playerService.GetPlayerCount(),
@@ -92,17 +125,20 @@ func (r *RoundManager) GetGameState(playerId string) GameStatePayload {
 			TotalRealizedPnl:   totalRealizedPnl,
 			TotalUnrealizedPnl: totalUnrealizedPnl,
 		},
-	}
+	}, nil
 }
 
 func (r *RoundManager) transitionToLive() {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+
 	log.Println("--- Transitioning to Live Phase ---")
 	r.phase = domain.Live
 	r.phaseEndTime = time.Now().Add(LiveDuration)
 
 	if len(r.chartData) == 0 || len(r.hourlyData) == 0 {
 		log.Println("Failed to load chart data for live phase, transitioning to cooldown")
-		r.transitionToCooldown()
+		r.transitionToCooldownUnsafe()
 		return
 	}
 
@@ -116,6 +152,12 @@ func (r *RoundManager) transitionToLive() {
 }
 
 func (r *RoundManager) transitionToCooldown() {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	r.transitionToCooldownUnsafe()
+}
+
+func (r *RoundManager) transitionToCooldownUnsafe() {
 	log.Println("--- Transitioning to Cooldown Phase ---")
 	r.phase = domain.Closed
 	r.phaseEndTime = time.Now().Add(CooldownDuration)
@@ -128,6 +170,9 @@ func (r *RoundManager) transitionToCooldown() {
 }
 
 func (r *RoundManager) transitionToLobby() {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+
 	log.Println("--- Transitioning to Lobby Phase ---")
 	r.phase = domain.Lobby
 	r.phaseEndTime = time.Now().Add(LobbyDuration)
@@ -148,8 +193,28 @@ func (r *RoundManager) transitionToLobby() {
 	}
 	r.broadcastPhaseUpdate(data)
 
-	r.chartData = <-r.chartDataChan
-	r.hourlyData = <-r.hourlyDataChan
+	// Wait for market data with timeout
+	select {
+	case r.chartData = <-r.chartDataChan:
+		log.Printf("Loaded %d daily chart data points", len(r.chartData))
+	case <-r.ctx.Done():
+		log.Println("Context cancelled while loading chart data")
+		return
+	case <-time.After(30 * time.Second):
+		log.Println("Timeout loading chart data")
+		r.chartData = []domain.PriceData{}
+	}
+
+	select {
+	case r.hourlyData = <-r.hourlyDataChan:
+		log.Printf("Loaded %d hourly data points", len(r.hourlyData))
+	case <-r.ctx.Done():
+		log.Println("Context cancelled while loading hourly data")
+		return
+	case <-time.After(30 * time.Second):
+		log.Println("Timeout loading hourly data")
+		r.hourlyData = []domain.PriceData{}
+	}
 
 	log.Printf("Loaded %d daily chart data and %d hourly data", len(r.chartData), len(r.hourlyData))
 
@@ -193,6 +258,7 @@ func generateUUID() string {
 	b := make([]byte, 16)
 	_, err := cryptorand.Read(b)
 	if err != nil {
+		log.Printf("Error generating UUID: %v", err)
 		return ""
 	}
 	return fmt.Sprintf("%x-%x-%x-%x-%x", b[0:4], b[4:6], b[6:8], b[8:10], b[10:])
@@ -214,9 +280,9 @@ func (r *RoundManager) loadDailyChartData(randomDecrease int) {
 	log.Printf("Loading daily chart data from %s to %s", from, to)
 	limit := int(to.Sub(from).Hours() / 24)
 
-	chartData, err := r.marketService.LoadPriceData(context.Background(), Ticker, from, to, "day", &limit)
+	chartData, err := r.marketService.LoadPriceData(r.ctx, Ticker, from, to, "day", &limit)
 	if err != nil {
-		log.Println("Error loading price data:", err)
+		log.Printf("Error loading daily price data: %v", err)
 		r.chartDataChan <- nil
 		return
 	}
@@ -230,9 +296,9 @@ func (r *RoundManager) loadHourlyChartData(randomDecrease int) {
 	log.Printf("Loading hourly chart data from %s to %s", from, to)
 
 	limit := HourlyDataForDays * 24 * 60
-	hourlyData, err := r.marketService.LoadPriceData(context.Background(), Ticker, from, to, "hour", &limit)
+	hourlyData, err := r.marketService.LoadPriceData(r.ctx, Ticker, from, to, "hour", &limit)
 	if err != nil {
-		log.Println("Error loading hourly price data:", err)
+		log.Printf("Error loading hourly price data: %v", err)
 		r.hourlyDataChan <- nil
 		return
 	}
@@ -241,6 +307,9 @@ func (r *RoundManager) loadHourlyChartData(randomDecrease int) {
 }
 
 func (r *RoundManager) sendPriceUpdate(priceData domain.PriceData) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+
 	updateLast := false
 	if len(r.chartData) == 0 {
 		r.chartData = append(r.chartData, priceData)
@@ -273,30 +342,45 @@ func (r *RoundManager) sendPriceUpdate(priceData domain.PriceData) {
 
 func (r *RoundManager) runLivePhase() {
 	log.Println("--- Running Live Phase ---")
-	if len(r.hourlyData) == 0 {
-		log.Println("no hourly data to broadcast")
+
+	r.mu.RLock()
+	hourlyData := r.hourlyData
+	currentPhase := r.phase
+	r.mu.RUnlock()
+
+	if len(hourlyData) == 0 {
+		log.Println("No hourly data to broadcast")
 		return
 	}
-	livePhaseTick := LiveDuration / time.Duration(len(r.hourlyData))
+
+	livePhaseTick := LiveDuration / time.Duration(len(hourlyData))
 	log.Printf("Live phase tick duration: %s", livePhaseTick)
 	ticker := time.NewTicker(livePhaseTick)
 	defer ticker.Stop()
 
 	i := 0
-	for range ticker.C {
-		if i >= len(r.hourlyData) || r.phase != domain.Live {
-			break
+	for {
+		select {
+		case <-r.ctx.Done():
+			log.Println("Live phase cancelled")
+			return
+		case <-ticker.C:
+			r.mu.RLock()
+			currentPhase = r.phase
+			r.mu.RUnlock()
+
+			if i >= len(hourlyData) || currentPhase != domain.Live {
+				log.Println("--- Live Phase Finished ---")
+				return
+			}
+
+			priceData := hourlyData[i]
+			r.sendPriceUpdate(priceData)
+			r.sendPnlUpdate()
+			i++
 		}
-
-		priceData := r.hourlyData[i]
-		r.sendPriceUpdate(priceData)
-
-		r.sendPnlUpdate()
-		i++
 	}
-	log.Println("--- Live Phase Finished ---")
 }
-
 
 func (r *RoundManager) sendPnlUpdate() {
 	if len(r.chartData) == 0 {
@@ -304,6 +388,10 @@ func (r *RoundManager) sendPnlUpdate() {
 	}
 
 	currentPrice := r.GetCurrentPrice()
+	if currentPrice == 0 {
+		log.Println("Warning: Current price is 0, skipping PnL update")
+		return
+	}
 
 	// Update PnL for all players with active positions
 	r.playerService.UpdateAllPlayerPnl(currentPrice)
@@ -324,6 +412,7 @@ func (r *RoundManager) sendPnlUpdate() {
 
 			client, exists := r.hub.Clients[playerID]
 			if !exists {
+				log.Printf("Warning: Client not found for player %s", playerID)
 				continue
 			}
 
@@ -336,8 +425,10 @@ func (r *RoundManager) sendPnlUpdate() {
 	}
 }
 
-
 func (r *RoundManager) GetCurrentPrice() float64 {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+
 	if len(r.chartData) == 0 {
 		return 0
 	}
