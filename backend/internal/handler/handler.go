@@ -1,9 +1,7 @@
 package handler
 
 import (
-	"net/http"
 	"tradeoff/backend/internal/config"
-	"tradeoff/backend/internal/helpers"
 	"tradeoff/backend/internal/service"
 )
 
@@ -21,18 +19,4 @@ func NewHandler(hub *service.Hub, roundManager *service.RoundManager, authServic
 		AuthService:  authService,
 		Config:       config,
 	}
-}
-
-func (h *Handler) GetPlayerInfo(w http.ResponseWriter, r *http.Request) {
-	// Extract user ID from context
-	userID, ok := r.Context().Value("userId").(string)
-	if !ok {
-		http.Error(w, "Unauthorized", http.StatusUnauthorized)
-		return
-	}
-
-	// Get player session information
-	session := h.RoundManager.GetPlayerSessionOrCreate(userID)
-
-	helpers.RespondWithJSON(w, http.StatusOK, session)
 }

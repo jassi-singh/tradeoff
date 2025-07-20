@@ -34,6 +34,7 @@ const (
 )
 
 type Position struct {
+	Quantity      float64      `json:"quantity"`
 	Type          PositionType `json:"type"`
 	EntryPrice    float64      `json:"entryPrice"`
 	EntryTime     time.Time    `json:"entryTime"`
