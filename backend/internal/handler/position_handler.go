@@ -26,8 +26,8 @@ func (h *Handler) CreatePosition(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Create the position using the RoundManager
-	position, err := h.RoundManager.CreatePosition(userID, &positionReq.Type)
+	currentPrice := h.RoundManager.GetCurrentPrice()
+	position, err := h.PlayerService.CreatePosition(userID, positionReq.Type, currentPrice)
 	if err != nil {
 		helpers.RespondWithError(w, err)
 		return
@@ -45,8 +45,9 @@ func (h *Handler) ClosePosition(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Close the position using the RoundManager
-	if err := h.RoundManager.ClosePosition(userID); err != nil {
+	currentPrice := h.RoundManager.GetCurrentPrice()
+	_, err := h.PlayerService.ClosePosition(userID, currentPrice)
+	if err != nil {
 		helpers.RespondWithError(w, err)
 		return
 	}

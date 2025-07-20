@@ -35,7 +35,7 @@ func main() {
 	roundManager := service.NewRoundManager(hub, marketService, playerService)
 	go roundManager.Run()
 
-	handler := handler.NewHandler(hub, roundManager, authService, config)
+	handler := handler.NewHandler(hub, roundManager, authService, config, playerService)
 	router := router.NewRouter(handler, config)
 
 	log.Printf("TradeOff Game Server starting on port %s...", config.Server.Port)

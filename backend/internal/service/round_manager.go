@@ -6,10 +6,8 @@ import (
 	"fmt"
 	"log"
 	"math/rand/v2"
-	"net/http"
 	"time"
 	"tradeoff/backend/internal/domain"
-	"tradeoff/backend/internal/helpers"
 )
 
 type RoundManager struct {
@@ -299,31 +297,13 @@ func (r *RoundManager) runLivePhase() {
 	log.Println("--- Live Phase Finished ---")
 }
 
-func (r *RoundManager) CreatePosition(playerID string, positionType *domain.PositionType) (*domain.Position, error) {
-	if len(r.chartData) == 0 {
-		return nil, helpers.NewCustomError("no chart data available", http.StatusBadRequest)
-	}
-
-	currentPrice := r.chartData[len(r.chartData)-1].Close
-	return r.playerService.CreatePosition(playerID, *positionType, currentPrice)
-}
-
-func (r *RoundManager) ClosePosition(playerID string) error {
-	if len(r.chartData) == 0 {
-		return helpers.NewCustomError("no chart data available", http.StatusBadRequest)
-	}
-
-	currentPrice := r.chartData[len(r.chartData)-1].Close
-	_, err := r.playerService.ClosePosition(playerID, currentPrice)
-	return err
-}
 
 func (r *RoundManager) sendPnlUpdate() {
 	if len(r.chartData) == 0 {
 		return
 	}
 
-	currentPrice := r.chartData[len(r.chartData)-1].Close
+	currentPrice := r.GetCurrentPrice()
 
 	// Update PnL for all players with active positions
 	r.playerService.UpdateAllPlayerPnl(currentPrice)
@@ -357,3 +337,9 @@ func (r *RoundManager) sendPnlUpdate() {
 }
 
 
+func (r *RoundManager) GetCurrentPrice() float64 {
+	if len(r.chartData) == 0 {
+		return 0
+	}
+	return r.chartData[len(r.chartData)-1].Close
+}
