@@ -1,6 +1,5 @@
 "use client";
 
-import apiService from "@/api";
 import useAuthStore from "@/stores/useAuthStore";
 import { useWsStore } from "@/stores/useWsStore";
 import { useEffect } from "react";
@@ -37,7 +36,7 @@ const Provider = ({ children }: { children: React.ReactNode }) => {
     return () => {
       disconnect();
     };
-  }, [user, token, connect, disconnect]);
+  }, [user, token, connect, disconnect, isTokenExpired]);
 
   return <>{children}</>;
 };

@@ -1,7 +1,7 @@
 interface StatCardProps {
   label: string;
   value: string | number;
-  valueColor?: "success" | "danger" | "warning" | "info" | "default";
+  valueColor?: string;
   className?: string;
 }
 

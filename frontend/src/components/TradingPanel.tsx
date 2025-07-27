@@ -41,27 +41,6 @@ export default function TradingPanel() {
     return () => clearInterval(interval);
   }, [activePosition]);
 
-  const getPnlColorType = (pnl: number): "success" | "danger" | "default" => {
-    if (pnl > 0) return "success";
-    if (pnl < 0) return "danger";
-    return "default";
-  };
-
-  const getPhaseColorType = (
-    phase: string
-  ): "success" | "danger" | "warning" | "default" => {
-    switch (phase) {
-      case "live":
-        return "success";
-      case "closed":
-        return "danger";
-      case "lobby":
-        return "warning";
-      default:
-        return "default";
-    }
-  };
-
   return (
     <div className="bg-gray-900/80 backdrop-blur-sm rounded-xl border border-gray-700/30 p-6 shadow-xl">
       <div className="flex items-center justify-between gap-6">
@@ -77,13 +56,13 @@ export default function TradingPanel() {
           <StatCard
             label="Realized P&L"
             value={formatCurrency(totalRealizedPnl)}
-            valueColor={getPnlColorType(totalRealizedPnl)}
+            valueColor={getPnlColor(totalRealizedPnl)}
           />
 
           <StatCard
             label="Unrealized P&L"
             value={formatCurrency(totalUnrealizedPnl)}
-            valueColor={getPnlColorType(totalUnrealizedPnl)}
+            valueColor={getPnlColor(totalUnrealizedPnl)}
           />
         </div>
 
@@ -108,7 +87,7 @@ export default function TradingPanel() {
         <StatCard
           label="Phase"
           value={phase.toUpperCase()}
-          valueColor={getPhaseColorType(phase)}
+          valueColor={getPhaseColor(phase)}
           className="font-semibold"
         />
 
@@ -130,13 +109,13 @@ export default function TradingPanel() {
             <StatCard
               label="P&L"
               value={formatCurrency(activePosition.pnl)}
-              valueColor={getPnlColorType(activePosition.pnl)}
+              valueColor={getPnlColor(activePosition.pnl)}
             />
 
             <StatCard
               label="P&L %"
               value={formatPercentage(activePosition.pnlPercentage)}
-              valueColor={getPnlColorType(activePosition.pnlPercentage)}
+              valueColor={getPnlColor(activePosition.pnlPercentage)}
             />
 
             <StatCard label="Duration" value={formatDuration(duration)} />
