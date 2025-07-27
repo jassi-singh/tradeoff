@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"tradeoff/backend/internal/domain"
 	"tradeoff/backend/internal/helpers"
+	"tradeoff/backend/internal/service"
 )
 
 type positionRequest struct {
@@ -33,8 +34,19 @@ func (h *Handler) CreatePosition(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	helpers.RespondWithJSON(w, http.StatusCreated, position)
+	// Send count update to all clients
+	longPositions, shortPositions := h.PlayerService.GetPositionsCount()
+	countUpdate := service.WsMessage{
+		Type: service.WsMsgTypeCountUpdate,
+		Data: service.CountUpdatePayload{
+			LongPositions:  longPositions,
+			ShortPositions: shortPositions,
+			TotalPlayers:   h.PlayerService.GetPlayerCount(),
+		},
+	}
+	h.Hub.Broadcast <- countUpdate
 
+	helpers.RespondWithJSON(w, http.StatusCreated, position)
 }
 
 func (h *Handler) ClosePosition(w http.ResponseWriter, r *http.Request) {
@@ -51,6 +63,18 @@ func (h *Handler) ClosePosition(w http.ResponseWriter, r *http.Request) {
 		helpers.RespondWithError(w, err)
 		return
 	}
+
+	// Send count update to all clients
+	longPositions, shortPositions := h.PlayerService.GetPositionsCount()
+	countUpdate := service.WsMessage{
+		Type: service.WsMsgTypeCountUpdate,
+		Data: service.CountUpdatePayload{
+			LongPositions:  longPositions,
+			ShortPositions: shortPositions,
+			TotalPlayers:   h.PlayerService.GetPlayerCount(),
+		},
+	}
+	h.Hub.Broadcast <- countUpdate
 
 	w.WriteHeader(http.StatusNoContent)
 }
