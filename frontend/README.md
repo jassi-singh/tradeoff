@@ -20,6 +20,7 @@ This application is built with Next.js and React. It is responsible for renderin
 - **Multiplayer Sessions:** Multiple players can join the same game and see each other's activities in real-time
 - **Player Onboarding:** A simple and clean overlay allows new players to join a game by entering a username. Player sessions are persisted in local storage
 - **Live Player Statistics:** Real-time display of total players, long/short position counts, and game phase information
+- **Live Leaderboard:** Real-time leaderboard showing top 20 players ranked by active balance, with personal highlighting
 
 ### Trading Interface
 
@@ -32,7 +33,7 @@ This application is built with Next.js and React. It is responsible for renderin
 
 - **Dynamic UI:** The UI dynamically reflects the current game state, showing the active phase and a countdown timer for the next phase transition
 - **Responsive Design:** Modern, mobile-friendly interface built with Tailwind CSS
-- **Component-Based Architecture:** Built with reusable React components for different parts of the UI like the chart, timer, trading panel, and game info display
+- **Component-Based Architecture:** Built with reusable React components for different parts of the UI like the chart, timer, trading panel, game info display, and leaderboard
 - **State Management:** Comprehensive state management using Zustand for game state, authentication, and WebSocket connections
 
 ---
@@ -60,6 +61,7 @@ The project's `src` directory is organized to separate concerns:
   - `TradingPanel.tsx`: Position management and trading controls
   - `GameInfo.tsx`: Game phase and player statistics display
   - `Timer.tsx`: Countdown timer for phase transitions
+  - `Leaderboard.tsx`: Real-time player rankings and statistics
   - `overlay/`: Modal components for player onboarding
 - `/stores`: Zustand state management stores:
   - `useAuthStore.ts`: Authentication state and token management
@@ -265,11 +267,13 @@ docker run -p 3000:3000 tradeoff-frontend
 
 ## Future Enhancements
 
-### Phase 2: Live Leaderboard
+### Phase 2: Live Leaderboard ✅ **COMPLETE**
 
-- **Active User Count**: Real-time display of connected players
-- **Player Rankings**: Live leaderboard showing top performers
-- **Performance Metrics**: Trading statistics and rankings
+- **Active User Count**: Real-time display of connected players ✅
+- **Player Rankings**: Live leaderboard showing top performers ✅
+- **Performance Metrics**: Trading statistics and rankings ✅
+- **Personal Highlighting**: Current player's position highlighted on leaderboard ✅
+- **Real-time Updates**: Leaderboard updates automatically as balances change ✅
 
 ### Phase 3: Scalability Study
 

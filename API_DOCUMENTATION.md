@@ -268,6 +268,30 @@ Sent with current player and position count statistics.
 }
 ```
 
+#### Leaderboard Update
+
+Sent with real-time leaderboard data showing top players ranked by active balance.
+
+**Type:** `leaderboard_update`
+
+```json
+{
+  "type": "leaderboard_update",
+  "data": [
+    {
+      "playerId": "uuid",
+      "username": "string",
+      "activeBalance": 125.5
+    },
+    {
+      "playerId": "uuid",
+      "username": "string",
+      "activeBalance": 118.75
+    }
+  ]
+}
+```
+
 ## Data Structures
 
 ### Player
@@ -330,6 +354,16 @@ Sent with current player and position count statistics.
 
 - `long`: Betting that the price will go up
 - `short`: Betting that the price will go down
+
+### LeaderboardPlayer
+
+```json
+{
+  "playerId": "uuid",
+  "username": "string",
+  "activeBalance": 125.5
+}
+```
 
 ## Error Handling
 
@@ -429,9 +463,9 @@ wscat -c "ws://localhost:8080/ws?token=<access_token>"
 
 The following features are planned for future phases:
 
-1. **Leaderboards**: Player rankings and statistics
-2. **Scheduled Rounds**: Pre-scheduled game sessions
-3. **Social Features**: Player profiles and sharing
-4. **Advanced Analytics**: Detailed trading statistics
-5. **Mobile App**: Native mobile application
-6. **Real-time Chat**: Player communication during games
+1. **Scheduled Rounds**: Pre-scheduled game sessions
+2. **Social Features**: Player profiles and sharing
+3. **Advanced Analytics**: Detailed trading statistics
+4. **Mobile App**: Native mobile application
+5. **Real-time Chat**: Player communication during games
+6. **Performance Optimization**: Load testing and scalability improvements (Phase 3)

@@ -236,11 +236,13 @@ You can also build and run the backend service using the provided Dockerfile.
 
 ## Future Enhancements
 
-### Phase 2: Live Leaderboard
+### Phase 2: Live Leaderboard ✅ **COMPLETE**
 
-- **Active User Count**: Real-time display of connected players
-- **Player Rankings**: Live leaderboard showing top performers
-- **Performance Metrics**: Trading statistics and rankings
+- **Active User Count**: Real-time display of connected players ✅
+- **Player Rankings**: Live leaderboard showing top performers ✅
+- **Performance Metrics**: Trading statistics and rankings ✅
+- **Leaderboard Service**: Backend service for calculating and broadcasting rankings ✅
+- **Real-time Updates**: Leaderboard updates automatically as balances change ✅
 
 ### Phase 3: Scalability Study
 

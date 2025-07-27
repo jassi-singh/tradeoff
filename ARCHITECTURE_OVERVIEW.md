@@ -123,6 +123,23 @@ func (h *Hub) SendDirect()                     // Direct message to player
 - Historical data loading for game rounds
 - Data transformation for chart display
 
+#### 5. Leaderboard System
+
+**Purpose**: Manages real-time player rankings and statistics
+
+**Key Responsibilities**:
+
+- Calculates active balances including unrealized P&L
+- Sorts players by performance for leaderboard display
+- Provides real-time updates to all connected clients
+- Limits leaderboard to top 20 players for performance
+
+**Key Methods**:
+
+```go
+func (s *PlayerService) GetLeaderboard() []domain.LeaderboardPlayer
+```
+
 ### Data Flow
 
 #### Game Initialization
@@ -146,6 +163,7 @@ func (h *Hub) SendDirect()                     // Direct message to player
 2. **Price Broadcast**: New price data sent to all connected clients
 3. **P&L Update**: PlayerService recalculates P&L for all active positions
 4. **Individual Updates**: P&L updates sent to each affected player
+5. **Leaderboard Update**: Leaderboard recalculated and broadcast to all players
 
 ## Frontend Architecture
 
@@ -163,6 +181,7 @@ The frontend uses Zustand for state management with three main stores:
 │ • Login/Logout │ • Positions    │ • Connection Status     │
 │ • Token Refresh│ • Chart Data   │ • Message Routing       │
 │ • User Data    │ • P&L Data     │ • Reconnection Logic    │
+│                │ • Leaderboard  │                          │
 └─────────────────────────────────────────────────────────────┘
 ```
 
@@ -174,6 +193,7 @@ App
 │   ├── JoinGameOverlay (Modal)
 │   └── Main Game Interface
 │       ├── CandlestickChart (Real-time chart)
+│       ├── Leaderboard (Player rankings)
 │       ├── TradingPanel (Position controls)
 │       ├── GameInfo (Phase & stats)
 │       └── Timer (Countdown)
@@ -447,9 +467,9 @@ frontend/
 
 ### Phase 2 Enhancements
 
-1. **Live Leaderboard**: Real-time display of active user count and player rankings
-2. **Player Rankings**: Live leaderboard showing top performers
-3. **Performance Metrics**: Trading statistics and rankings
+1. **Live Leaderboard**: Real-time display of active user count and player rankings ✅ **COMPLETE**
+2. **Player Rankings**: Live leaderboard showing top performers ✅ **COMPLETE**
+3. **Performance Metrics**: Trading statistics and rankings ✅ **COMPLETE**
 
 ### Phase 3 Microservices
 
@@ -457,8 +477,9 @@ frontend/
 2. **Trading Service**: Position management microservice
 3. **Market Data Service**: Real-time market data service
 4. **Game Service**: Game state management service
-5. **Notification Service**: Real-time notifications
-6. **Analytics Service**: Trading analytics and reporting
+5. **Leaderboard Service**: Dedicated leaderboard and ranking service
+6. **Notification Service**: Real-time notifications
+7. **Analytics Service**: Trading analytics and reporting
 
 ### Infrastructure Evolution
 

@@ -14,9 +14,31 @@ This project is being built in public as a comprehensive case study in full-stac
 
 ---
 
-## Current Project Status (Phase 1 Complete - December 2024)
+## Current Project Status (Phase 2 Complete)
 
-**Phase 1 has been successfully completed!** The game now supports full multiplayer functionality with real-time trading capabilities. Players can join games, create positions, and compete in live trading rounds.
+**Phase 2 has been successfully completed!** The game now features a live leaderboard that displays real-time player rankings and active user statistics. Players can see their position on the leaderboard and track their performance against other players in real-time.
+
+### 🎯 Phase 2 Achievements
+
+**Live Leaderboard System Implemented:**
+
+- ✅ **Real-time Rankings**: Live leaderboard showing top 20 players sorted by active balance
+- ✅ **Player Statistics**: Real-time display of total players online and position distributions
+- ✅ **Personal Highlighting**: Current player's position is highlighted on the leaderboard
+- ✅ **Live Updates**: Leaderboard updates automatically as players' balances change
+- ✅ **Balance Calculation**: Active balance includes unrealized P&L from open positions
+- ✅ **WebSocket Integration**: New `leaderboard_update` message type for real-time updates
+- ✅ **Backend Service**: `GetLeaderboard()` method in PlayerService for ranking calculations
+- ✅ **Frontend Component**: New `Leaderboard.tsx` component with responsive design
+- ✅ **UI Integration**: Leaderboard prominently displayed alongside the trading chart
+
+**Technical Implementation:**
+
+- **Backend**: Enhanced `PlayerService` with leaderboard calculation logic
+- **Frontend**: New leaderboard component with real-time updates via WebSocket
+- **Data Flow**: Leaderboard updates triggered during P&L calculations
+- **Performance**: Limited to top 20 players for optimal performance
+- **User Experience**: Seamless integration with existing game interface
 
 ### ✅ Completed Features
 
@@ -27,6 +49,14 @@ This project is being built in public as a comprehensive case study in full-stac
 - **Dynamic P&L Tracking**: Real-time profit/loss calculation based on current market prices
 - **Position Controls**: Intuitive UI for position creation, management, and closing
 - **Round-based Gameplay**: Continuous 3-phase game loop (Lobby → Live → Cooldown)
+
+#### Live Leaderboard System
+
+- **Real-time Rankings**: Live leaderboard showing top 20 players sorted by active balance
+- **Player Statistics**: Real-time display of total players online and position distributions
+- **Personal Highlighting**: Current player's position is highlighted on the leaderboard
+- **Live Updates**: Leaderboard updates automatically as players' balances change
+- **Balance Calculation**: Active balance includes unrealized P&L from open positions
 
 #### Real-time Communication
 
@@ -48,6 +78,7 @@ This project is being built in public as a comprehensive case study in full-stac
 - **Interactive Trading Panel**: Clear position controls with real-time P&L display
 - **Game Information Display**: Live phase status, player counts, and position statistics
 - **Seamless Onboarding**: Simple username-based player registration
+- **Leaderboard Integration**: Prominent leaderboard display alongside the trading chart
 
 ---
 
@@ -61,13 +92,13 @@ This project is planned to evolve through three distinct phases, demonstrating a
 - **Architecture:** Monolith (Single Go Backend + Next.js Frontend).
 - **Status:** ✅ **Complete** - Full multiplayer support with real-time trading
 
-### Phase 2: The Live Leaderboard ⏳ **NEXT**
+### Phase 2: The Live Leaderboard ✅ **COMPLETE**
 
 - **Goal:** Add a live leaderboard that displays active user count and player rankings in real-time.
-- **Architecture:** The application will remain a **Monolith**, enhanced with leaderboard functionality.
-- **Status:** ⏳ **Planned**
+- **Architecture:** The application remains a **Monolith**, enhanced with leaderboard functionality.
+- **Status:** ✅ **Complete** - Live leaderboard with real-time player rankings
 
-### Phase 3: The Scalability Case Study ⏳ **Planned**
+### Phase 3: The Scalability Case Study ⏳ **NEXT**
 
 - **Goal:** Use professional load-testing tools (`k6`) to prove the monolith's performance limits under simulated multiplayer load, and then evolve the architecture to solve those bottlenecks.
 - **Architecture:** Refactor the system into an **Evolved Microservices Architecture**. Key components (e.g., data ingestion, trade processing) will be extracted into separate, scalable services.
