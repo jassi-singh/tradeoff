@@ -38,8 +38,8 @@ type Position struct {
 	Type          PositionType `json:"type"`
 	EntryPrice    float64      `json:"entryPrice"`
 	EntryTime     time.Time    `json:"entryTime"`
-	Pnl           float64      `json:"Pnl"`
-	PnlPercentage float64      `json:"PnlPercentage"`
+	Pnl           float64      `json:"pnl"`
+	PnlPercentage float64      `json:"pnlPercentage"`
 }
 
 type ClosedPosition struct {

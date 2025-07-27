@@ -159,8 +159,6 @@ func (s *PlayerService) GetPositionsCount() (int, int) {
 	return longPositions, shortPositions
 }
 
-
-
 func (s *PlayerService) ResetAllPlayers() {
 	s.mu.Lock()
 	defer s.mu.Unlock()
@@ -197,14 +195,14 @@ func (s *PlayerService) UpdateAllPlayerPnl(currentPrice float64) {
 	}
 }
 
-// GetPlayerPnlData returns PnL data for a specific player
-func (s *PlayerService) GetPlayerPnlData(playerID string) (float64, float64) {
+// GetPlayerStat returns PnL data for a specific player
+func (s *PlayerService) GetPlayerStat(playerID string) (float64, float64, float64, float64) {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 
 	session, exists := s.playerSessions[playerID]
 	if !exists {
-		return 0, 0
+		return 0, 0, 0, 0
 	}
 
 	totalRealizedPnl := 0.0
@@ -212,10 +210,13 @@ func (s *PlayerService) GetPlayerPnlData(playerID string) (float64, float64) {
 		totalRealizedPnl += closedPosition.Pnl
 	}
 
-	totalUnrealizedPnl := 0.0
+	balance := session.Balance
+	activePnl := 0.0
+	activePnlPercentage := 0.0
 	if session.ActivePosition != nil {
-		totalUnrealizedPnl = session.ActivePosition.Pnl
+		activePnl = session.ActivePosition.Pnl
+		activePnlPercentage = session.ActivePosition.PnlPercentage
 	}
 
-	return totalRealizedPnl, totalUnrealizedPnl
+	return totalRealizedPnl, activePnl, balance, activePnlPercentage
 }

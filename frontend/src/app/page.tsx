@@ -2,6 +2,7 @@ import JoinGameOverlay from "@/components/overlay/JoinGameOverlay";
 import OverlayChildren from "@/components/overlay/OverlayChildren";
 import ChartComponent from "@/components/CandlestickChart";
 import { GameInfo } from "@/components/GameInfo";
+import TradingPanel from "@/components/TradingPanel";
 
 export default function Home() {
   return (
@@ -17,6 +18,7 @@ export default function Home() {
             <ChartComponent />
           </div>
           <div className="flex-[1] flex flex-col gap-4">
+            <TradingPanel />
           </div>
         </div>
       </div>

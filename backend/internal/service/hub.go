@@ -26,12 +26,14 @@ type WsMessage struct {
 // GameStatePayload is the data for the 'game_state_sync' and 'new_round' messages.
 // It contains everything a client needs to render the game from scratch.
 type GameStatePayload struct {
-	RoundID   string             `json:"roundId"`
-	ChartData []domain.PriceData `json:"chartData"`
+	RoundID             string             `json:"roundId"`
+	ChartData           []domain.PriceData `json:"chartData"`
+	TotalPnl            float64            `json:"pnl"`
+	ActivePnl           float64            `json:"activePnl"`
+	ActivePnlPercentage float64            `json:"activePnlPercentage"`
 	PhaseChangePayload
 	CountUpdatePayload
 	domain.BasePlayerState
-	PnlUpdatePayload
 }
 
 // PhaseChangePayload is the data for the 'phase_update' message.
@@ -50,8 +52,10 @@ type CountUpdatePayload struct {
 // PnlUpdatePayload is the data for the 'pnl_update' message.
 // This is sent directly to a single player.
 type PnlUpdatePayload struct {
-	TotalRealizedPnl   float64 `json:"realizedPnl"`
-	TotalUnrealizedPnl float64 `json:"unrealizedPnl"`
+	TotalPnl            float64 `json:"pnl"`
+	Balance             float64 `json:"balance"`
+	ActivePnl           float64 `json:"activePnl"`
+	ActivePnlPercentage float64 `json:"activePnlPercentage"`
 }
 
 type PriceUpdate struct {

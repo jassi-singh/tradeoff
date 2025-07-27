@@ -13,30 +13,33 @@ export interface UserWithToken {
 import { CandlestickData } from "lightweight-charts";
 
 export type GamePhase = "lobby" | "live" | "closed";
+export type PositionType = "long" | "short";
 
-interface PnlData {
-    totalRealizedPnl: number;
-    totalUnrealizedPnl: number;
+export interface PnlData {
+    pnl: number;
+    activePnl: number;
+    activePnlPercentage: number;
+    balance: number;
 }
 
-interface PhaseData {
+export interface PhaseData {
     phase: GamePhase;
     endTime: string;
 }
 
-interface CountData {
+export interface CountData {
     longPositions: number;
     shortPositions: number;
     totalPlayers: number;
 }
 
-interface BasePlayerState {
+export interface BasePlayerState {
     balance: number;
-    activePosition: Position;
+    activePosition: Position | null;
     closedPositions: ClosedPosition[];
 }
 
-interface Position {
+export interface Position {
     type: PositionType;
     entryPrice: number;
     entryTime: string; 
@@ -44,22 +47,22 @@ interface Position {
     pnlPercentage: number;
 }
 
-interface ClosedPosition extends Position {
+export interface ClosedPosition extends Position {
     exitPrice: number;
     exitTime: string;
 }
 
-interface GameStateData extends PhaseData, CountData, PnlData, BasePlayerState {
+export interface GameStateData extends PhaseData, CountData, PnlData, BasePlayerState {
     roundId: string;
     chartData: CandlestickData[];
 }
 
-interface PriceUpdateData {
+export interface PriceUpdateData {
     priceData: CandlestickData;
     updateLast: boolean;
 }
 
 export interface WebSocketMessage  {
     type:  "price_update" | "pnl_update" | "phase_update" | "count_update" | "game_state_sync"| "new_round";
-    data: PriceUpdateData | PnLData | PhaseData | CountData | GameStateData 
+    data: PriceUpdateData | PnlData | PhaseData | CountData | GameStateData 
 }

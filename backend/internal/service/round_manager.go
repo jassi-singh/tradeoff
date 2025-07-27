@@ -101,7 +101,7 @@ func (r *RoundManager) GetGameState(playerId string) (GameStatePayload, error) {
 	r.mu.RUnlock()
 
 	session := r.playerService.GetPlayerSessionOrCreate(playerId)
-	totalRealizedPnl, totalUnrealizedPnl := r.playerService.GetPlayerPnlData(playerId)
+	totalPnl, activePnl, balance, activePnlPercentage := r.playerService.GetPlayerStat(playerId)
 	longPositions, shortPositions := r.playerService.GetPositionsCount()
 
 	return GameStatePayload{
@@ -117,14 +117,14 @@ func (r *RoundManager) GetGameState(playerId string) (GameStatePayload, error) {
 			ShortPositions: shortPositions,
 		},
 		BasePlayerState: domain.BasePlayerState{
-			Balance:         session.Balance,
+			Balance:         balance,
 			ActivePosition:  session.ActivePosition,
 			ClosedPositions: session.ClosedPositions,
 		},
-		PnlUpdatePayload: PnlUpdatePayload{
-			TotalRealizedPnl:   totalRealizedPnl,
-			TotalUnrealizedPnl: totalUnrealizedPnl,
-		},
+
+		TotalPnl:            totalPnl,
+		ActivePnl:           activePnl,
+		ActivePnlPercentage: activePnlPercentage,
 	}, nil
 }
 
@@ -234,10 +234,10 @@ func (r *RoundManager) transitionToLobby() {
 			ActivePosition:  nil,
 			ClosedPositions: []domain.ClosedPosition{},
 		},
-		PnlUpdatePayload: PnlUpdatePayload{
-			TotalRealizedPnl:   0,
-			TotalUnrealizedPnl: 0,
-		},
+
+		TotalPnl:            0,
+		ActivePnl:           0,
+		ActivePnlPercentage: 0,
 	}
 
 	r.hub.Broadcast <- WsMessage{
@@ -343,7 +343,6 @@ func (r *RoundManager) runLivePhase() {
 
 	r.mu.RLock()
 	hourlyData := r.hourlyData
-	currentPhase := r.phase
 	r.mu.RUnlock()
 
 	if len(hourlyData) == 0 {
@@ -364,7 +363,7 @@ func (r *RoundManager) runLivePhase() {
 			return
 		case <-ticker.C:
 			r.mu.RLock()
-			currentPhase = r.phase
+			currentPhase := r.phase
 			r.mu.RUnlock()
 
 			if i >= len(hourlyData) || currentPhase != domain.Live {
@@ -396,15 +395,16 @@ func (r *RoundManager) sendPnlUpdate() {
 
 	// Get all sessions and send individual PnL updates
 	sessions := r.playerService.GetAllSessions()
-	for playerID, session := range sessions {
-		if session.ActivePosition != nil {
-			totalRealizedPnl, totalUnrealizedPnl := r.playerService.GetPlayerPnlData(playerID)
+	for playerID := range sessions {
+			totalRealizedPnl, activePnl, balance, activePnlPercentage := r.playerService.GetPlayerStat(playerID)
 
 			msg := WsMessage{
 				Type: WsMsgTypePnlUpdate,
 				Data: PnlUpdatePayload{
-					TotalUnrealizedPnl: totalUnrealizedPnl,
-					TotalRealizedPnl:   totalRealizedPnl,
+					TotalPnl:            totalRealizedPnl,
+					Balance:             balance,
+					ActivePnl:           activePnl,
+					ActivePnlPercentage: activePnlPercentage,
 				},
 			}
 
@@ -419,7 +419,6 @@ func (r *RoundManager) sendPnlUpdate() {
 				Message: msg,
 			}
 			r.hub.SendDirect <- directMsg
-		}
 	}
 }
 

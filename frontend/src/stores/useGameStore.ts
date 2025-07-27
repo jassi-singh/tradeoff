@@ -1,6 +1,7 @@
 import { CandlestickData } from "lightweight-charts";
 import { create } from "zustand";
-import { GamePhase, Position, ClosedPosition, WebSocketMessage, PnlData, PhaseData, CountData, GameStateData, PriceUpdateData } from "@/types";
+import { GamePhase, Position, ClosedPosition, WebSocketMessage, PnlData, PhaseData, CountData, GameStateData, PriceUpdateData, PositionType } from "@/types";
+import apiService from "@/api";
 
 type GameStore = {
     roundId: string
@@ -17,7 +18,8 @@ type GameStore = {
     totalUnrealizedPnl: number
 
     // actions
-
+    handleTrade: (positionType: PositionType) => void
+    handleClosePosition: () => void
     handleWSMessage: (msg: WebSocketMessage) => void
 }
 
@@ -34,12 +36,22 @@ export const useGameStore = create<GameStore>((set, get) => ({
     closedPositions: [],
     totalRealizedPnl: 0,
     totalUnrealizedPnl: 0,
-    
-    
-    setPnl: (pnlData: PnlData) => set({ totalRealizedPnl: pnlData.totalRealizedPnl, totalUnrealizedPnl: pnlData.totalUnrealizedPnl }),
-    setPhase: (phaseData: PhaseData) => set({ phase: phaseData.phase, endTime: new Date(phaseData.endTime) }),
-    setCount: (countData: CountData) => set({ longPositions: countData.longPositions, shortPositions: countData.shortPositions, totalPlayers: countData.totalPlayers }),
-    setGameState: (gameStateData: GameStateData) => set({ roundId: gameStateData.roundId, chartData: gameStateData.chartData, phase: gameStateData.phase, endTime: new Date(gameStateData.endTime) }),
+    handleTrade: async (positionType: PositionType) => {
+        try {
+            const position = await apiService.createPosition(positionType)
+            set({ activePosition: position })
+        } catch (error) {
+            console.error("Error creating position:", error);
+        }
+    },
+    handleClosePosition: async () => {
+        try {
+            await apiService.closePosition()
+            set({ activePosition: null })
+        } catch (error) {
+            console.error("Error closing position:", error);
+        }
+    },
     handleWSMessage: (msg: WebSocketMessage) => {
         switch (msg.type) {
             case "price_update":
@@ -58,9 +70,16 @@ export const useGameStore = create<GameStore>((set, get) => ({
                 break;
             case "pnl_update": {
                 const data = msg.data as PnlData;
+                const activePosition = get().activePosition
+                if (activePosition) {
+                    activePosition.pnl = data.activePnl
+                    activePosition.pnlPercentage = data.activePnlPercentage
+                }
                 set({
-                    totalRealizedPnl: data.totalRealizedPnl,
-                    totalUnrealizedPnl: data.totalUnrealizedPnl,
+                    totalRealizedPnl: data.pnl,
+                    totalUnrealizedPnl: data.activePnl,
+                    balance: data.balance,
+                    activePosition: activePosition,
                 });
                 break;
             }
@@ -92,8 +111,8 @@ export const useGameStore = create<GameStore>((set, get) => ({
                     balance: data.balance,
                     activePosition: data.activePosition,
                     closedPositions: data.closedPositions,
-                    totalRealizedPnl: data.totalRealizedPnl,
-                    totalUnrealizedPnl: data.totalUnrealizedPnl,
+                    totalRealizedPnl: data.pnl,
+                    totalUnrealizedPnl: data.activePnl,
                     longPositions: data.longPositions,
                     shortPositions: data.shortPositions,
                     totalPlayers: data.totalPlayers,
