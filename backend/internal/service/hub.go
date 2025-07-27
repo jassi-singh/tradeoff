@@ -15,7 +15,7 @@ const (
 	WsMsgTypePriceUpdate   WsMsgType = "price_update"
 	WsMsgTypeCountUpdate   WsMsgType = "count_update"
 
-	WsMsgTypePnlUpdate WsMsgType = "pnl_update"
+	WsMsgTypePnlUpdate         WsMsgType = "pnl_update"
 	WsMsgTypeLeaderboardUpdate WsMsgType = "leaderboard_update"
 )
 

@@ -235,7 +235,7 @@ func (s *PlayerService) GetLeaderboard() []domain.LeaderboardPlayer {
 	for _, session := range s.playerSessions {
 		activeBalance := session.Balance
 		if session.ActivePosition != nil {
-			activeBalance += session.ActivePosition.Pnl
+			activeBalance += session.ActivePosition.EntryPrice*session.ActivePosition.Quantity + session.ActivePosition.Pnl
 		}
 		leaderboard = append(leaderboard, domain.LeaderboardPlayer{
 			PlayerId:      session.PlayerId,

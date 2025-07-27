@@ -17,7 +17,7 @@ type Client struct {
 func NewClient(conn *websocket.Conn, hub *Hub, playerId string) *Client {
 	return &Client{
 		conn:     conn,
-		send:     make(chan WsMessage),
+		send:     make(chan WsMessage, 100), // Increased buffer size from default
 		hub:      hub,
 		PlayerId: playerId,
 	}
