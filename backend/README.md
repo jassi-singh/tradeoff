@@ -14,15 +14,29 @@ This service is written in Go and is responsible for managing player state, hand
 
 ## Core Features
 
-The backend implements a complete, round-based trading game cycle.
+The backend implements a complete, multiplayer, round-based trading game cycle.
 
-- **Real-time Game Phases:** The game operates in a continuous loop of three phases:
-  1.  **Lobby:** A waiting period where the system loads historical market data for the upcoming round.
-  2.  **Live:** The trading phase. The backend streams historical price data to all connected clients in real-time, simulating a live market.
-  3.  **Cooldown:** A brief period after the live phase before a new round begins in the lobby.
-- **WebSocket Communication:** Real-time game state, chart data, and price updates are pushed to clients using WebSockets.
-- **Market Data Simulation:** The service uses the [Polygon.io](https://polygon.io/) API to fetch real historical price data for `X:BTCUSD` (Bitcoin/USD), which is then used to simulate the game's market.
-- **Player Management:** A REST API is available to create and retrieve players, with data persisted in a PostgreSQL database.
+### Game Mechanics
+
+- **Multiplayer Game Sessions**: Multiple players can join and participate in the same trading round simultaneously
+- **Real-time Game Phases**: The game operates in a continuous loop of three phases:
+  1.  **Lobby (15s):** A waiting period where players join and the system loads historical market data for the upcoming round.
+  2.  **Live (60s):** The active trading phase. Players can create and close positions while the backend streams historical price data to all connected clients in real-time, simulating a live market.
+  3.  **Cooldown (10s):** A brief period after the live phase before a new round begins in the lobby.
+- **Position Management**: Players can create long/short positions and close them during live trading phases
+- **Real-time P&L Tracking**: Live profit/loss calculation based on current market prices for all players
+
+### Real-time Communication
+
+- **WebSocket Communication**: Real-time game state, chart data, price updates, and position changes are pushed to clients using WebSockets
+- **Player Authentication**: JWT-based authentication system for secure player sessions
+- **Concurrent Player Support**: Handles multiple simultaneous WebSocket connections with proper session management
+
+### Market Data & Infrastructure
+
+- **Market Data Simulation**: The service uses the [Polygon.io](https://polygon.io/) API to fetch real historical price data for `X:BTCUSD` (Bitcoin/USD), which is then used to simulate the game's market
+- **Player Management**: A REST API is available to create and retrieve players, with data persisted in a PostgreSQL database
+- **Session Management**: In-memory player sessions with concurrent-safe operations for real-time game state
 
 ---
 
@@ -33,6 +47,7 @@ The backend implements a complete, round-based trading game cycle.
 - **WebSockets:** [Gorilla WebSocket](https://github.com/gorilla/websocket)
 - **Database:** PostgreSQL
 - **Configuration:** [Viper](https://github.com/spf13/viper)
+- **Authentication:** JWT (JSON Web Tokens)
 - **Market Data:** [Polygon.io API](https://polygon.io/)
 
 ---
@@ -43,37 +58,26 @@ The project follows a clean, layered architecture to separate concerns and impro
 
 - `/cmd/server`: The main application entry point. Responsible for initializing dependencies (database, services) and starting the HTTP server.
 - `/internal/config`: Handles loading application configuration from `config.yml` and environment variables.
-- `/internal/domain`: Contains the core data structures (models) of the application, such as `Player` and `PriceData`.
+- `/internal/domain`: Contains the core data structures (models) of the application, such as `Player`, `Position`, `PriceData`, and game phases.
 - `/internal/handler`: The web layer. Contains HTTP and WebSocket handlers responsible for processing incoming requests and interacting with the service layer.
+  - `auth_handler.go`: Handles player authentication and JWT token management
+  - `position_handler.go`: Manages position creation and closing operations
+  - `websocket_handler.go`: Handles WebSocket connections and real-time communication
 - `/internal/service`: Contains the core business logic.
-  - `round_manager.go`: Manages the game state, phase transitions, and the main game loop.
-  - `market_service.go`: Fetches data from the Polygon.io API.
-  - `hub.go`: Manages all active WebSocket client connections.
+  - `round_manager.go`: Manages the game state, phase transitions, and the main game loop
+  - `market_service.go`: Fetches data from the Polygon.io API
+  - `player_service.go`: Manages player sessions, positions, and P&L calculations
+  - `hub.go`: Manages all active WebSocket client connections
+  - `auth_service.go`: Handles JWT token generation and validation
 - `/internal/platform/router`: Configures the Chi router and defines all API routes.
 - `/internal/storage`: The data persistence layer. Implements repository interfaces for interacting with the PostgreSQL database.
+- `/internal/middleware`: HTTP middleware for authentication and request processing.
 
 ---
 
-## API Endpoints
+## API Documentation
 
-### REST API
-
-The following endpoints are available under the `/api` prefix.
-
-- `POST /api/player`
-
-  - Creates a new player.
-  - **Body:** `{"username": "string"}`
-  - **Response:** `201 Created` with the new player object.
-
-- `GET /api/player/{id}`
-  - Retrieves a player by their ID.
-  - **Response:** `200 OK` with the player object.
-
-### WebSocket API
-
-- `GET /ws?token={jwt_token}`
-  - Upgrades the connection to a WebSocket to receive real-time game updates. The `token` is a JWT access token used to authenticate and associate the connection with a player.
+For comprehensive API documentation, including all endpoints, WebSocket messages, and data structures, see **[API_DOCUMENTATION.md](../API_DOCUMENTATION.md)**.
 
 ---
 
@@ -133,7 +137,9 @@ Follow these instructions to get the backend server running on your local machin
 
     CREATE TABLE players (
         id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-        username VARCHAR(255) NOT NULL
+        username VARCHAR(255) NOT NULL,
+        refresh_token TEXT,
+        refresh_token_expiry TIMESTAMP
     );
     ```
 
@@ -172,3 +178,72 @@ You can also build and run the backend service using the provided Dockerfile.
     docker run --name tradeoff-backend --env-file .env -p 8080:8080 -d tradeoff-backend
     ```
     **Note:** If your PostgreSQL database is also running in a Docker container, you may need to adjust the `DATABASE_URL` in your `.env` file to point to the database container's network address (e.g., using `host.docker.internal` or a shared Docker network).
+
+---
+
+## Game Logic Details
+
+### Round Management
+
+- **Round Duration**: 85 seconds total (15s lobby + 60s live + 10s cooldown)
+- **Continuous Loop**: Rounds automatically restart after cooldown phase
+- **Market Data**: Each round uses different historical Bitcoin data for variety
+
+### Player Sessions
+
+- **Session Creation**: Players get a session when they first connect via WebSocket
+- **Concurrent Safety**: All session operations are thread-safe using read/write locks
+- **Session Reset**: Player sessions are reset at the start of each new round
+
+### Position Management
+
+- **One Position Per Player**: Players can only have one active position at a time
+- **Full Balance Investment**: When creating a position, the player invests their entire balance
+- **Real-time P&L**: P&L is calculated and updated in real-time during live trading
+- **Position Types**: Long (profit when price goes up) and Short (profit when price goes down)
+
+### WebSocket Communication
+
+- **Connection Management**: Hub manages all active WebSocket connections
+- **Message Broadcasting**: Game state updates are broadcast to all connected players
+- **Direct Messages**: P&L updates are sent directly to individual players
+- **Connection Cleanup**: Proper cleanup when players disconnect
+
+---
+
+## Development Notes
+
+### Key Design Decisions
+
+1. **Monolithic Architecture**: Chosen for Phase 1 simplicity and rapid development
+2. **In-Memory Game State**: Provides fast access and real-time updates
+3. **JWT Authentication**: Stateless authentication suitable for WebSocket connections
+4. **Real Market Data**: Uses actual Bitcoin price data for authentic trading experience
+
+### Testing Strategy
+
+- **Unit Tests**: Core business logic in services
+- **Integration Tests**: API endpoints and WebSocket communication
+- **Load Testing**: Planned for Phase 3 to identify bottlenecks
+
+### Monitoring & Logging
+
+- **Structured Logging**: All major operations are logged with appropriate detail
+- **Error Handling**: Comprehensive error handling with meaningful error messages
+- **Game Metrics**: Basic metrics for player counts and position statistics
+
+---
+
+## Future Enhancements
+
+### Phase 2: Live Leaderboard
+
+- **Active User Count**: Real-time display of connected players
+- **Player Rankings**: Live leaderboard showing top performers
+- **Performance Metrics**: Trading statistics and rankings
+
+### Phase 3: Scalability Study
+
+- **Load Testing**: Performance analysis under high load
+- **Microservices**: Architecture evolution based on bottlenecks
+- **Advanced Monitoring**: Comprehensive performance monitoring

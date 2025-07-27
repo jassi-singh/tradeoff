@@ -14,11 +14,26 @@ This application is built with Next.js and React. It is responsible for renderin
 
 ## Core Features
 
-- **Real-time Gameplay:** Connects to the backend via WebSockets to receive live game state updates, including phase transitions (Lobby, Live, Cooldown) and market data.
-- **Player Onboarding:** A simple and clean overlay allows new players to join a game by entering a username. Player sessions are persisted in local storage.
-- **Interactive Charting:** Displays historical and real-time stock data using **Lightweight Charts**, which updates live as new price data is streamed from the backend.
-- **Dynamic UI:** The UI dynamically reflects the current game state, showing the active phase and a countdown timer for the next phase transition.
-- **Component-Based Architecture:** Built with reusable React components for different parts of the UI like the leaderboard, portfolio, and game info display.
+### Multiplayer Game Experience
+
+- **Real-time Gameplay:** Connects to the backend via WebSockets to receive live game state updates, including phase transitions (Lobby, Live, Cooldown) and market data
+- **Multiplayer Sessions:** Multiple players can join the same game and see each other's activities in real-time
+- **Player Onboarding:** A simple and clean overlay allows new players to join a game by entering a username. Player sessions are persisted in local storage
+- **Live Player Statistics:** Real-time display of total players, long/short position counts, and game phase information
+
+### Trading Interface
+
+- **Interactive Charting:** Displays historical and real-time stock data using **Lightweight Charts**, which updates live as new price data is streamed from the backend
+- **Position Management:** Intuitive UI for creating long/short positions and closing them during live trading phases
+- **Real-time P&L Tracking:** Live profit/loss calculation and display with color-coded indicators
+- **Trading Panel:** Clear position controls with real-time balance and P&L information
+
+### User Experience
+
+- **Dynamic UI:** The UI dynamically reflects the current game state, showing the active phase and a countdown timer for the next phase transition
+- **Responsive Design:** Modern, mobile-friendly interface built with Tailwind CSS
+- **Component-Based Architecture:** Built with reusable React components for different parts of the UI like the chart, timer, trading panel, and game info display
+- **State Management:** Comprehensive state management using Zustand for game state, authentication, and WebSocket connections
 
 ---
 
@@ -29,6 +44,8 @@ This application is built with Next.js and React. It is responsible for renderin
 - **Styling:** [Tailwind CSS](https://tailwindcss.com/)
 - **State Management:** [Zustand](https://github.com/pmndrs/zustand)
 - **Charting Library:** [Lightweight Charts](https://www.tradingview.com/lightweight-charts/)
+- **Authentication:** JWT token management with automatic refresh
+- **Real-time Communication:** WebSocket integration for live updates
 
 ---
 
@@ -36,12 +53,19 @@ This application is built with Next.js and React. It is responsible for renderin
 
 The project's `src` directory is organized to separate concerns:
 
-- `/app`: Contains the main page and layout definitions for the Next.js App Router.
-- `/api.ts`: A dedicated file for functions that interact with the backend REST and WebSocket APIs.
-- `/components`: Contains all reusable React components, such as the chart, timer, and UI overlays.
-- `/hooks`: Custom React hooks, like `useWS` for simplifying WebSocket message handling.
-- `/stores`: Zustand state management stores, which handle global client state for authentication (`useAuthStore`), WebSocket connections (`useWsStore`), and game state (`useGameStore`).
-- `/types.d.ts`: TypeScript type definitions for shared data structures.
+- `/app`: Contains the main page and layout definitions for the Next.js App Router
+- `/api.ts`: A dedicated file for functions that interact with the backend REST and WebSocket APIs
+- `/components`: Contains all reusable React components:
+  - `CandlestickChart.tsx`: Interactive real-time chart component
+  - `TradingPanel.tsx`: Position management and trading controls
+  - `GameInfo.tsx`: Game phase and player statistics display
+  - `Timer.tsx`: Countdown timer for phase transitions
+  - `overlay/`: Modal components for player onboarding
+- `/stores`: Zustand state management stores:
+  - `useAuthStore.ts`: Authentication state and token management
+  - `useGameStore.ts`: Game state, positions, and real-time updates
+  - `useWsStore.ts`: WebSocket connection management
+- `/types.d.ts`: TypeScript type definitions for shared data structures
 
 ---
 
@@ -94,3 +118,161 @@ pnpm dev
 ```
 
 The application will be available at `http://localhost:3000`.
+
+---
+
+## Game Interface Components
+
+### Main Game Layout
+
+The game interface is divided into several key components:
+
+1. **Chart Area**: Real-time candlestick chart showing Bitcoin/USD price movements
+2. **Trading Panel**: Position management controls and P&L display
+3. **Game Information**: Current phase, timer, and player statistics
+4. **Player Onboarding**: Modal overlay for new player registration
+
+### Real-time Features
+
+- **Live Price Updates**: Chart updates in real-time as new price data arrives
+- **Phase Transitions**: UI automatically updates when game phases change
+- **Position Updates**: Trading panel reflects current position status and P&L
+- **Player Counts**: Live updates of total players and position distributions
+
+### Trading Interface
+
+- **Position Creation**: "Go Long" and "Go Short" buttons during live phase
+- **Position Management**: Active position display with entry price, time, and current P&L
+- **Position Closing**: "Close Position" button to exit current position
+- **Balance Tracking**: Real-time balance and P&L updates
+
+---
+
+## State Management
+
+### Authentication Store (`useAuthStore`)
+
+- Manages JWT tokens (access and refresh)
+- Handles login/logout functionality
+- Automatic token refresh on expiration
+- Persistent authentication state
+
+### Game Store (`useGameStore`)
+
+- Game state (phase, round ID, end time)
+- Player data (balance, positions, P&L)
+- Chart data and real-time updates
+- Trading actions (create/close positions)
+
+### WebSocket Store (`useWsStore`)
+
+- WebSocket connection management
+- Connection status tracking
+- Automatic reconnection handling
+- Message routing to game store
+
+---
+
+## API Integration
+
+### REST API Calls
+
+- **Authentication**: Login and token refresh endpoints
+- **Position Management**: Create and close position endpoints
+- **Error Handling**: Comprehensive error handling with user feedback
+
+### WebSocket Communication
+
+- **Connection**: Automatic WebSocket connection with JWT authentication
+- **Message Handling**: Real-time message processing for game updates
+- **Reconnection**: Automatic reconnection on connection loss
+- **Message Types**: Handles all game state, price, and P&L updates
+
+---
+
+## User Experience Features
+
+### Responsive Design
+
+- **Mobile-First**: Optimized for mobile and desktop viewing
+- **Dark Theme**: Modern dark theme for trading interface
+- **Accessibility**: Proper contrast and keyboard navigation support
+
+### Real-time Feedback
+
+- **Loading States**: Visual feedback during API calls
+- **Error Handling**: User-friendly error messages
+- **Success Indicators**: Clear feedback for successful actions
+
+### Game Flow
+
+1. **Player Registration**: Simple username entry to join game
+2. **Game Connection**: Automatic WebSocket connection and game state sync
+3. **Trading Phase**: Active trading during live phase with position controls
+4. **Round Transitions**: Seamless transitions between game phases
+
+---
+
+## Development Notes
+
+### Key Design Decisions
+
+1. **Component Architecture**: Modular components for maintainability
+2. **State Management**: Zustand for simple, efficient state management
+3. **Real-time Updates**: WebSocket-first design for live game experience
+4. **Type Safety**: Comprehensive TypeScript types for all data structures
+
+### Development Practices
+
+- **Component Design**: Reusable, composable components
+- **State Management**: Centralized state with Zustand
+- **Type Safety**: Comprehensive TypeScript usage
+- **Performance**: Optimized rendering and updates
+
+### Testing Strategy
+
+- **Component Testing**: Unit tests for individual components
+- **Integration Testing**: End-to-end testing of game flow
+- **State Testing**: Testing of Zustand store logic
+- **API Testing**: Testing of API integration and error handling
+
+---
+
+## Deployment
+
+### Docker Support
+
+The frontend includes a Dockerfile for containerized deployment:
+
+```bash
+docker build -t tradeoff-frontend .
+docker run -p 3000:3000 tradeoff-frontend
+```
+
+### Environment Configuration
+
+- **Development**: Uses local backend URL
+- **Production**: Configurable backend URL via environment variables
+- **Docker**: Pre-configured for Docker Compose deployment
+
+### Build Optimization
+
+- **Next.js Optimization**: Automatic code splitting and optimization
+- **Bundle Analysis**: Tools for analyzing bundle size and performance
+- **Image Optimization**: Automatic image optimization for better performance
+
+---
+
+## Future Enhancements
+
+### Phase 2: Live Leaderboard
+
+- **Active User Count**: Real-time display of connected players
+- **Player Rankings**: Live leaderboard showing top performers
+- **Performance Metrics**: Trading statistics and rankings
+
+### Phase 3: Scalability Study
+
+- **Load Testing**: Performance analysis under high load
+- **Microservices**: Architecture evolution based on bottlenecks
+- **Advanced Monitoring**: Comprehensive performance monitoring
