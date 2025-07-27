@@ -6,6 +6,7 @@ on:
       - main # Trigger this workflow on every push to the main branch
     paths:
       - 'backend/**' # Only run if files inside the /backend directory change
+  workflow_dispatch:
 
 jobs:
   build-and-deploy:
