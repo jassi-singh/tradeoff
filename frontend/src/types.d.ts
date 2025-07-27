@@ -62,7 +62,24 @@ export interface PriceUpdateData {
     updateLast: boolean;
 }
 
+// Leaderboard types
+export interface LeaderboardPlayer {
+    playerId: string;
+    username: string;
+    balance: number;
+    totalPnl: number;
+    activePosition?: Position;
+    rank: number;
+}
+
+export interface LeaderboardData {
+    players: LeaderboardPlayer[];
+    totalPlayers: number;
+    longPositions: number;
+    shortPositions: number;
+}
+
 export interface WebSocketMessage  {
-    type:  "price_update" | "pnl_update" | "phase_update" | "count_update" | "game_state_sync"| "new_round";
-    data: PriceUpdateData | PnlData | PhaseData | CountData | GameStateData 
+    type:  "price_update" | "pnl_update" | "phase_update" | "count_update" | "game_state_sync"| "new_round" | "leaderboard_update";
+    data: PriceUpdateData | PnlData | PhaseData | CountData | GameStateData | LeaderboardData
 }

@@ -2,6 +2,7 @@
 import { useGameStore } from "@/stores/useGameStore";
 import { PositionType } from "@/types";
 import apiService from "@/api";
+import { useState, useEffect } from "react";
 
 export default function TradingPanel() {
   const {
@@ -13,6 +14,24 @@ export default function TradingPanel() {
     handleTrade,
     handleClosePosition,
   } = useGameStore();
+
+  const [duration, setDuration] = useState(0);
+
+  // Update duration every second when there's an active position
+  useEffect(() => {
+    if (!activePosition) {
+      setDuration(0);
+      return;
+    }
+
+    const interval = setInterval(() => {
+      const entryTime = new Date(activePosition.entryTime).getTime();
+      const now = Date.now();
+      setDuration(Math.floor((now - entryTime) / 1000));
+    }, 1000);
+
+    return () => clearInterval(interval);
+  }, [activePosition]);
 
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat("en-US", {
@@ -26,149 +45,171 @@ export default function TradingPanel() {
     return `${percentage >= 0 ? "+" : ""}${percentage.toFixed(2)}%`;
   };
 
+  const formatDuration = (seconds: number) => {
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return `${mins}:${secs.toString().padStart(2, "0")}`;
+  };
+
+  const getPnlColor = (pnl: number) => {
+    if (pnl > 0) return "text-green-400";
+    if (pnl < 0) return "text-red-400";
+    return "text-gray-400";
+  };
+
+  const getPhaseColor = (phase: string) => {
+    switch (phase) {
+      case "live":
+        return "text-green-400";
+      case "closed":
+        return "text-red-400";
+      case "lobby":
+        return "text-yellow-400";
+      default:
+        return "text-gray-400";
+    }
+  };
+
   return (
-    <div className="bg-gray-900 rounded-lg p-6 space-y-6">
-      {/* Balance Section */}
-      <div className="space-y-4">
-        <h3 className="text-lg font-semibold text-white">Balance</h3>
-        <div className="space-y-2">
-          <div className="flex justify-between">
-            <span className="text-gray-400">Total Balance:</span>
-            <span className="text-white font-mono">
+    <div className="bg-gray-900 rounded-lg p-4">
+      <div className="flex items-center justify-between gap-6">
+        {/* Balance Section */}
+        <div className="flex items-center gap-6">
+          <div className="text-center">
+            <div className="text-xs text-gray-400 mb-1">Balance</div>
+            <div className="text-white font-mono text-lg font-bold">
               {formatCurrency(balance)}
-            </span>
+            </div>
           </div>
-          <div className="flex justify-between">
-            <span className="text-gray-400">Realized P&L:</span>
-            <span
-              className={`font-mono ${
-                totalRealizedPnl >= 0 ? "text-green-400" : "text-red-400"
-              }`}
+
+          <div className="text-center">
+            <div className="text-xs text-gray-400 mb-1">Realized P&L</div>
+            <div
+              className={`font-mono text-sm ${getPnlColor(totalRealizedPnl)}`}
             >
               {formatCurrency(totalRealizedPnl)}
-            </span>
+            </div>
           </div>
-          <div className="flex justify-between">
-            <span className="text-gray-400">Unrealized P&L:</span>
-            <span
-              className={`font-mono ${
-                totalUnrealizedPnl >= 0 ? "text-green-400" : "text-red-400"
-              }`}
+
+          <div className="text-center">
+            <div className="text-xs text-gray-400 mb-1">Unrealized P&L</div>
+            <div
+              className={`font-mono text-sm ${getPnlColor(totalUnrealizedPnl)}`}
             >
               {formatCurrency(totalUnrealizedPnl)}
-            </span>
+            </div>
           </div>
         </div>
-      </div>
 
-      {/* Trading Buttons */}
-      {phase === "live" && !activePosition && (
-        <div className="space-y-4">
-          <h3 className="text-lg font-semibold text-white">Trading</h3>
-          <div className="space-y-3">
-            <button
-              onClick={() => handleTrade("long")}
-              className="w-full bg-green-600 hover:bg-green-700 text-white font-semibold py-3 px-4 rounded-lg transition-colors"
-            >
-              Go Long
-            </button>
-            <button
-              onClick={() => handleTrade("short")}
-              className="w-full bg-red-600 hover:bg-red-700 text-white font-semibold py-3 px-4 rounded-lg transition-colors"
-            >
-              Go Short
-            </button>
-          </div>
-        </div>
-      )}
+        {/* Trading Controls */}
+        <div className="flex items-center gap-4">
+          {phase === "live" && !activePosition && (
+            <>
+              <button
+                onClick={() => handleTrade("long")}
+                className="bg-green-600 hover:bg-green-700 text-white font-semibold py-2 px-6 rounded-lg transition-colors text-sm"
+              >
+                LONG
+              </button>
+              <button
+                onClick={() => handleTrade("short")}
+                className="bg-red-600 hover:bg-red-700 text-white font-semibold py-2 px-6 rounded-lg transition-colors text-sm"
+              >
+                SHORT
+              </button>
+            </>
+          )}
 
-      {/* Close Position Button */}
-      {phase === "live" && activePosition && (
-        <div className="space-y-4">
-          <h3 className="text-lg font-semibold text-white">Trading</h3>
-          <div className="space-y-3">
+          {phase === "live" && activePosition && (
             <button
               onClick={handleClosePosition}
-              className="w-full bg-yellow-600 hover:bg-yellow-700 text-white font-semibold py-3 px-4 rounded-lg transition-colors"
+              className="bg-yellow-600 hover:bg-yellow-700 text-white font-semibold py-2 px-6 rounded-lg transition-colors text-sm"
             >
-              Close Position
+              CLOSE
             </button>
+          )}
+        </div>
+
+        {/* Game Phase */}
+        <div className="text-center">
+          <div className="text-xs text-gray-400 mb-1">Phase</div>
+          <div className={`font-semibold text-sm ${getPhaseColor(phase)}`}>
+            {phase.toUpperCase()}
           </div>
         </div>
-      )}
 
-      {/* Active Position */}
-      {activePosition && (
-        <div className="space-y-4">
-          <h3 className="text-lg font-semibold text-white">Active Position</h3>
-          <div className="bg-gray-800 rounded-lg p-4 space-y-3">
-            <div className="flex justify-between items-center">
-              <span className="text-gray-400">Type:</span>
-              <span
-                className={`font-semibold ${
+        {/* Active Position */}
+        {activePosition && (
+          <div className="flex items-center gap-6">
+            <div className="text-center">
+              <div className="text-xs text-gray-400 mb-1">Position</div>
+              <div
+                className={`text-sm font-semibold ${
                   activePosition.type === "long"
                     ? "text-green-400"
                     : "text-red-400"
                 }`}
               >
                 {activePosition.type.toUpperCase()}
-              </span>
+              </div>
             </div>
-            <div className="flex justify-between">
-              <span className="text-gray-400">Entry Price:</span>
-              <span className="text-white font-mono">
+
+            <div className="text-center">
+              <div className="text-xs text-gray-400 mb-1">Entry Price</div>
+              <div className="text-white font-mono text-sm">
                 {formatCurrency(activePosition.entryPrice)}
-              </span>
+              </div>
             </div>
-            <div className="flex justify-between">
-              <span className="text-gray-400">Entry Time:</span>
-              <span className="text-white text-sm">
-                {new Date(activePosition.entryTime).toLocaleTimeString()}
-              </span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-gray-400">P&L:</span>
-              <span
-                className={`font-mono ${
-                  activePosition.pnl >= 0 ? "text-green-400" : "text-red-400"
-                }`}
+
+            <div className="text-center">
+              <div className="text-xs text-gray-400 mb-1">P&L</div>
+              <div
+                className={`font-mono text-sm ${getPnlColor(
+                  activePosition.pnl
+                )}`}
               >
                 {formatCurrency(activePosition.pnl)}
-              </span>
+              </div>
             </div>
-            <div className="flex justify-between">
-              <span className="text-gray-400">P&L %:</span>
-              <span
-                className={`font-mono ${
-                  activePosition.pnlPercentage >= 0
-                    ? "text-green-400"
-                    : "text-red-400"
-                }`}
+
+            <div className="text-center">
+              <div className="text-xs text-gray-400 mb-1">P&L %</div>
+              <div
+                className={`font-mono text-sm ${getPnlColor(
+                  activePosition.pnlPercentage
+                )}`}
               >
                 {formatPercentage(activePosition.pnlPercentage)}
-              </span>
+              </div>
+            </div>
+
+            <div className="text-center">
+              <div className="text-xs text-gray-400 mb-1">Duration</div>
+              <div className="text-white font-mono text-sm">
+                {formatDuration(duration)}
+              </div>
+            </div>
+
+            <div className="text-center">
+              <div className="text-xs text-gray-400 mb-1">Risk</div>
+              <div
+                className={`text-xs font-semibold ${
+                  Math.abs(activePosition.pnlPercentage) > 10
+                    ? "text-red-400"
+                    : Math.abs(activePosition.pnlPercentage) > 5
+                    ? "text-yellow-400"
+                    : "text-green-400"
+                }`}
+              >
+                {Math.abs(activePosition.pnlPercentage) > 10
+                  ? "HIGH"
+                  : Math.abs(activePosition.pnlPercentage) > 5
+                  ? "MED"
+                  : "LOW"}
+              </div>
             </div>
           </div>
-        </div>
-      )}
-
-      {/* Game Phase Info */}
-      <div className="space-y-2">
-        <h3 className="text-lg font-semibold text-white">Game Status</h3>
-        <div className="flex justify-between">
-          <span className="text-gray-400">Phase:</span>
-          <span
-            className={`font-semibold ${
-              phase === "live"
-                ? "text-green-400"
-                : phase === "closed"
-                ? "text-red-400"
-                : "text-yellow-400"
-            }`}
-          >
-            {phase.toUpperCase()}
-          </span>
-        </div>
+        )}
       </div>
     </div>
   );

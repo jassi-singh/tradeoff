@@ -1,6 +1,6 @@
 import { CandlestickData } from "lightweight-charts";
 import { create } from "zustand";
-import { GamePhase, Position, ClosedPosition, WebSocketMessage, PnlData, PhaseData, CountData, GameStateData, PriceUpdateData, PositionType } from "@/types";
+import { GamePhase, Position, ClosedPosition, WebSocketMessage, PnlData, PhaseData, CountData, GameStateData, PriceUpdateData, PositionType, LeaderboardData } from "@/types";
 import apiService from "@/api";
 
 type GameStore = {
@@ -16,6 +16,7 @@ type GameStore = {
     closedPositions: ClosedPosition[] 
     totalRealizedPnl: number
     totalUnrealizedPnl: number
+    leaderboardData: LeaderboardData | null
 
     // actions
     handleTrade: (positionType: PositionType) => void
@@ -36,6 +37,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
     closedPositions: [],
     totalRealizedPnl: 0,
     totalUnrealizedPnl: 0,
+    leaderboardData: null,
     handleTrade: async (positionType: PositionType) => {
         try {
             const position = await apiService.createPosition(positionType)
@@ -94,6 +96,16 @@ export const useGameStore = create<GameStore>((set, get) => ({
             case "count_update": {
                 const data = msg.data as CountData;
                 set({
+                    longPositions: data.longPositions,
+                    shortPositions: data.shortPositions,
+                    totalPlayers: data.totalPlayers,
+                });
+                break;
+            }
+            case "leaderboard_update": {
+                const data = msg.data as LeaderboardData;
+                set({
+                    leaderboardData: data,
                     longPositions: data.longPositions,
                     shortPositions: data.shortPositions,
                     totalPlayers: data.totalPlayers,
