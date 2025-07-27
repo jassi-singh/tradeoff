@@ -8,7 +8,9 @@ const JoinGameOverlay: React.FC<{ children: React.ReactNode }> = ({
   const [isHydrated, setIsHydrated] = React.useState(false);
   const { user, joinGame } = useAuthStore();
 
-  useEffect(() => { setIsHydrated(true) }, []);
+  useEffect(() => {
+    setIsHydrated(true);
+  }, []);
 
   const handleJoin = (e: React.FormEvent) => {
     e.preventDefault();
@@ -24,10 +26,10 @@ const JoinGameOverlay: React.FC<{ children: React.ReactNode }> = ({
   }
 
   return (
-    <div className="absolute inset-0 bg-black/75 flex items-center justify-center z-10">
+    <div className="absolute inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-10">
       <form
         onSubmit={handleJoin}
-        className="bg-gray-800 p-8 rounded-lg shadow-lg flex flex-col gap-4"
+        className="bg-gray-900/80 backdrop-blur-sm p-8 rounded-lg shadow-lg max-w-md w-full mx-4 border border-gray-700/30"
       >
         {children}
       </form>
