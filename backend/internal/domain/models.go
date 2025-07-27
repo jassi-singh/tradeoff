@@ -50,6 +50,7 @@ type ClosedPosition struct {
 
 type PlayerState struct {
 	PlayerId string `json:"playerId"`
+	Username string `json:"username"`
 	BasePlayerState
 }
 
@@ -57,4 +58,10 @@ type BasePlayerState struct {
 	Balance         float64          `json:"balance"`
 	ActivePosition  *Position        `json:"activePosition"`
 	ClosedPositions []ClosedPosition `json:"closedPositions"`
+}
+
+type LeaderboardPlayer struct {
+	PlayerId      string  `json:"playerId"`
+	Username      string  `json:"username"`
+	ActiveBalance float64 `json:"activeBalance"`
 }

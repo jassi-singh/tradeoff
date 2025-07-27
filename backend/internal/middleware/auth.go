@@ -28,7 +28,7 @@ func AuthMiddleware(config *config.Config) func(http.Handler) http.Handler {
 			}
 
 			tokenStr := parts[1]
-			playerID, err := helpers.ValidateJWTAndGetPlayerID(tokenStr, config.JWT.Secret)
+			playerID, _, err := helpers.ValidateJWTAndGetPlayerID(tokenStr, config.JWT.Secret)
 			if err != nil {
 				http.Error(w, "Invalid token", http.StatusUnauthorized)
 				return

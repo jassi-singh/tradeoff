@@ -88,7 +88,7 @@ func (r *RoundManager) Run() {
 	}
 }
 
-func (r *RoundManager) GetGameState(playerId string) (GameStatePayload, error) {
+func (r *RoundManager) GetGameState(playerId string, username string) (GameStatePayload, error) {
 	if playerId == "" {
 		return GameStatePayload{}, fmt.Errorf("player ID cannot be empty")
 	}
@@ -100,7 +100,7 @@ func (r *RoundManager) GetGameState(playerId string) (GameStatePayload, error) {
 	phaseEndTime := r.phaseEndTime
 	r.mu.RUnlock()
 
-	session := r.playerService.GetPlayerSessionOrCreate(playerId)
+	session := r.playerService.GetPlayerSessionOrCreate(playerId, &username)
 	totalPnl, activePnl, balance, activePnlPercentage := r.playerService.GetPlayerStat(playerId)
 	longPositions, shortPositions := r.playerService.GetPositionsCount()
 
@@ -391,34 +391,46 @@ func (r *RoundManager) sendPnlUpdate() {
 	}
 
 	// Update PnL for all players with active positions
-	r.playerService.UpdateAllPlayerPnl(currentPrice)
+	pnlUpdated := r.playerService.UpdateAllPlayerPnl(currentPrice)
+
+	if !pnlUpdated {
+		return
+	}
 
 	// Get all sessions and send individual PnL updates
 	sessions := r.playerService.GetAllSessions()
 	for playerID := range sessions {
-			totalRealizedPnl, activePnl, balance, activePnlPercentage := r.playerService.GetPlayerStat(playerID)
+		totalRealizedPnl, activePnl, balance, activePnlPercentage := r.playerService.GetPlayerStat(playerID)
 
-			msg := WsMessage{
-				Type: WsMsgTypePnlUpdate,
-				Data: PnlUpdatePayload{
-					TotalPnl:            totalRealizedPnl,
-					Balance:             balance,
-					ActivePnl:           activePnl,
-					ActivePnlPercentage: activePnlPercentage,
-				},
-			}
+		msg := WsMessage{
+			Type: WsMsgTypePnlUpdate,
+			Data: PnlUpdatePayload{
+				TotalPnl:            totalRealizedPnl,
+				Balance:             balance,
+				ActivePnl:           activePnl,
+				ActivePnlPercentage: activePnlPercentage,
+			},
+		}
 
-			client, exists := r.hub.Clients[playerID]
-			if !exists {
-				log.Printf("Warning: Client not found for player %s", playerID)
-				continue
-			}
+		client, exists := r.hub.Clients[playerID]
+		if !exists {
+			log.Printf("Warning: Client not found for player %s", playerID)
+			continue
+		}
 
-			directMsg := DirectMessage{
-				Client:  client,
-				Message: msg,
-			}
-			r.hub.SendDirect <- directMsg
+		directMsg := DirectMessage{
+			Client:  client,
+			Message: msg,
+		}
+		r.hub.SendDirect <- directMsg
+	}
+
+	// calculate leaderboard
+	leaderboard := r.playerService.GetLeaderboard()
+
+	r.hub.Broadcast <- WsMessage{
+		Type: WsMsgTypeLeaderboardUpdate,
+		Data: leaderboard,
 	}
 }
 

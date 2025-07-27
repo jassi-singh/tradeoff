@@ -16,10 +16,6 @@ export default function Leaderboard() {
     }).format(amount);
   };
 
-  const formatPercentage = (percentage: number) => {
-    return `${percentage >= 0 ? "+" : ""}${percentage.toFixed(1)}%`;
-  };
-
   // Show loading state if no leaderboard data yet
   if (!leaderboardData) {
     return (
@@ -65,7 +61,7 @@ export default function Leaderboard() {
 
       {/* Leaderboard List */}
       <div className="space-y-2 flex-1">
-        {leaderboardData.players.slice(0, 8).map((player) => (
+        {leaderboardData.players.map((player, index) => (
           <div
             key={player.playerId}
             className={`flex items-center justify-between p-2 rounded ${
@@ -76,36 +72,17 @@ export default function Leaderboard() {
           >
             <div className="flex items-center gap-2">
               <div className="flex items-center justify-center w-5 h-5 rounded-full bg-gray-700 text-xs font-bold">
-                {player.rank}
+                {index + 1}
               </div>
               <div className="flex flex-col">
                 <span className="text-sm font-medium text-white">
                   {player.username}
                 </span>
-                {player.activePosition && (
-                  <span
-                    className={`text-xs ${
-                      player.activePosition.type === "long"
-                        ? "text-green-400"
-                        : "text-red-400"
-                    }`}
-                  >
-                    {player.activePosition.type.toUpperCase()}{" "}
-                    {formatPercentage(player.activePosition.pnlPercentage)}
-                  </span>
-                )}
               </div>
             </div>
             <div className="text-right">
               <div className="text-sm font-mono text-white">
-                {formatCurrency(player.balance)}
-              </div>
-              <div
-                className={`text-xs ${
-                  player.totalPnl >= 0 ? "text-green-400" : "text-red-400"
-                }`}
-              >
-                {formatCurrency(player.totalPnl)}
+                {formatCurrency(player.activeBalance)}
               </div>
             </div>
           </div>

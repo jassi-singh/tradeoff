@@ -44,7 +44,7 @@ func RespondWithJSON(w http.ResponseWriter, status int, data interface{}) {
 }
 
 // ValidateJWTAndGetPlayerID validates a JWT token and returns the player ID
-func ValidateJWTAndGetPlayerID(tokenStr, jwtSecret string) (string, error) {
+func ValidateJWTAndGetPlayerID(tokenStr, jwtSecret string) (string, string, error) {
 	// Parse and validate the token
 	token, err := jwt.Parse(tokenStr, func(token *jwt.Token) (interface{}, error) {
 		// Validate the signing method
@@ -54,24 +54,25 @@ func ValidateJWTAndGetPlayerID(tokenStr, jwtSecret string) (string, error) {
 		return []byte(jwtSecret), nil
 	})
 	if err != nil {
-		return "", err
+		return "", "", err
 	}
 
 	if !token.Valid {
-		return "", jwt.ErrTokenMalformed
+		return "", "", jwt.ErrTokenMalformed
 	}
 
 	// Extract claims
 	claims, ok := token.Claims.(jwt.MapClaims)
 	if !ok {
-		return "", jwt.ErrInvalidKey
+		return "", "", jwt.ErrInvalidKey
 	}
 
 	// Get player ID from claims
 	playerID, ok := claims["sub"].(string)
+	username, ok := claims["name"].(string)
 	if !ok || playerID == "" {
-		return "", jwt.ErrInvalidKey
+		return "", "", jwt.ErrInvalidKey
 	}
 
-	return playerID, nil
+	return playerID, username, nil
 }

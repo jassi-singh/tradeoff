@@ -66,10 +66,7 @@ export interface PriceUpdateData {
 export interface LeaderboardPlayer {
     playerId: string;
     username: string;
-    balance: number;
-    totalPnl: number;
-    activePosition?: Position;
-    rank: number;
+    activeBalance: number;
 }
 
 export interface LeaderboardData {

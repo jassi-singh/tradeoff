@@ -2,6 +2,7 @@ package service
 
 import (
 	"errors"
+	"sort"
 	"sync"
 	"time"
 	"tradeoff/backend/internal/domain"
@@ -21,7 +22,7 @@ func NewPlayerService() *PlayerService {
 
 // GetPlayerSessionOrCreate is the safe way to get or create a session.
 // It handles the "check-then-act" concurrency problem correctly.
-func (s *PlayerService) GetPlayerSessionOrCreate(playerID string) *domain.PlayerState {
+func (s *PlayerService) GetPlayerSessionOrCreate(playerID string, username *string) *domain.PlayerState {
 	// First, try with just a read lock for performance.
 	s.mu.RLock()
 	session, exists := s.playerSessions[playerID]
@@ -46,6 +47,7 @@ func (s *PlayerService) GetPlayerSessionOrCreate(playerID string) *domain.Player
 	// If it still doesn't exist, we are safe to create it.
 	newSession := &domain.PlayerState{
 		PlayerId: playerID,
+		Username: *username,
 		BasePlayerState: domain.BasePlayerState{
 			Balance:         StartingBalance,
 			ActivePosition:  nil,
@@ -182,17 +184,20 @@ func (s *PlayerService) GetAllSessions() map[string]*domain.PlayerState {
 }
 
 // UpdateAllPlayerPnl updates PnL for all players with active positions
-func (s *PlayerService) UpdateAllPlayerPnl(currentPrice float64) {
+func (s *PlayerService) UpdateAllPlayerPnl(currentPrice float64) bool {
 	s.mu.Lock()
 	defer s.mu.Unlock()
+	pnlUpdated := false
 
 	for _, session := range s.playerSessions {
 		if session.ActivePosition != nil {
 			pnl, pnlPercentage := s.calculatePnl(session.ActivePosition, currentPrice)
 			session.ActivePosition.Pnl = pnl
 			session.ActivePosition.PnlPercentage = pnlPercentage
+			pnlUpdated = true
 		}
 	}
+	return pnlUpdated
 }
 
 // GetPlayerStat returns PnL data for a specific player
@@ -219,4 +224,35 @@ func (s *PlayerService) GetPlayerStat(playerID string) (float64, float64, float6
 	}
 
 	return totalRealizedPnl, activePnl, balance, activePnlPercentage
+}
+
+func (s *PlayerService) GetLeaderboard() []domain.LeaderboardPlayer {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+
+	leaderboard := []domain.LeaderboardPlayer{}
+
+	for _, session := range s.playerSessions {
+		activeBalance := session.Balance
+		if session.ActivePosition != nil {
+			activeBalance += session.ActivePosition.Pnl
+		}
+		leaderboard = append(leaderboard, domain.LeaderboardPlayer{
+			PlayerId:      session.PlayerId,
+			Username:      session.Username,
+			ActiveBalance: activeBalance,
+		})
+	}
+
+	// Sort by balance in descending order
+	sort.Slice(leaderboard, func(i, j int) bool {
+		return leaderboard[i].ActiveBalance > leaderboard[j].ActiveBalance
+	})
+
+	// Return only top 20 entries
+	if len(leaderboard) > 20 {
+		leaderboard = leaderboard[:20]
+	}
+
+	return leaderboard
 }
