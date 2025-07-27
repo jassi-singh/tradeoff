@@ -29,8 +29,10 @@ export const Timer = () => {
   }, [endTime]);
 
   return (
-    <div>
-      <p>{formatTime(timeLeft)}</p>
+    <div className="text-center">
+      <div className="text-2xl font-bold text-white font-mono">
+        {formatTime(timeLeft)}
+      </div>
     </div>
   );
 };

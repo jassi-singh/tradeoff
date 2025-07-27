@@ -25,15 +25,15 @@ const ChartComponent: React.FC = () => {
 
     const chartOptions: DeepPartial<ChartOptions> = {
       layout: {
-        textColor: "white",
-        background: { type: ColorType.Solid, color: "#131722" },
+        textColor: "#ffffff",
+        background: { type: ColorType.Solid, color: "#0a0a0a" },
       },
       grid: {
         vertLines: {
-          color: "#20242f",
+          color: "#374151",
         },
         horzLines: {
-          color: "#20242f",
+          color: "#374151",
         },
       },
       width: chartContainerRef.current.clientWidth,
@@ -43,11 +43,11 @@ const ChartComponent: React.FC = () => {
     chartRef.current = chart;
 
     const candlestickSeries = chart.addSeries(CandlestickSeries, {
-      upColor: "#26a69a",
-      downColor: "#ef5350",
+      upColor: "#00d4aa",
+      downColor: "#ff6b6b",
       borderVisible: false,
-      wickUpColor: "#26a69a",
-      wickDownColor: "#ef5350",
+      wickUpColor: "#00d4aa",
+      wickDownColor: "#ff6b6b",
     });
     seriesRef.current = candlestickSeries;
 
@@ -89,7 +89,7 @@ const ChartComponent: React.FC = () => {
   return (
     <div
       ref={chartContainerRef}
-      className="chart-container h-full"
+      className="chart-container h-full bg-gray-900/80 backdrop-blur-sm rounded-xl border border-gray-700/30"
       style={{ position: "relative" }}
     />
   );

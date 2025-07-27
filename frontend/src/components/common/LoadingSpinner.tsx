@@ -9,7 +9,7 @@ export const LoadingSpinner: React.FC<LoadingSpinnerProps> = ({
 }) => {
   return (
     <div className={`flex justify-center items-center ${className}`}>
-      <div className="text-gray-400">{message}</div>
+      <div className="text-gray-400 text-sm">{message}</div>
     </div>
   );
 };

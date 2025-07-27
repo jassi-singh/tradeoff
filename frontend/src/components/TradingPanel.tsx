@@ -41,28 +41,49 @@ export default function TradingPanel() {
     return () => clearInterval(interval);
   }, [activePosition]);
 
+  const getPnlColorType = (pnl: number): "success" | "danger" | "default" => {
+    if (pnl > 0) return "success";
+    if (pnl < 0) return "danger";
+    return "default";
+  };
+
+  const getPhaseColorType = (
+    phase: string
+  ): "success" | "danger" | "warning" | "default" => {
+    switch (phase) {
+      case "live":
+        return "success";
+      case "closed":
+        return "danger";
+      case "lobby":
+        return "warning";
+      default:
+        return "default";
+    }
+  };
+
   return (
-    <div className="bg-gray-900 rounded-lg p-4">
+    <div className="bg-gray-900/80 backdrop-blur-sm rounded-xl border border-gray-700/30 p-6 shadow-xl">
       <div className="flex items-center justify-between gap-6">
         {/* Balance Section */}
         <div className="flex items-center gap-6">
           <StatCard
             label="Balance"
             value={formatCurrency(balance)}
-            valueColor="text-white"
+            valueColor="default"
             className="text-lg font-bold"
           />
 
           <StatCard
             label="Realized P&L"
             value={formatCurrency(totalRealizedPnl)}
-            valueColor={getPnlColor(totalRealizedPnl)}
+            valueColor={getPnlColorType(totalRealizedPnl)}
           />
 
           <StatCard
             label="Unrealized P&L"
             value={formatCurrency(totalUnrealizedPnl)}
-            valueColor={getPnlColor(totalUnrealizedPnl)}
+            valueColor={getPnlColorType(totalUnrealizedPnl)}
           />
         </div>
 
@@ -87,7 +108,7 @@ export default function TradingPanel() {
         <StatCard
           label="Phase"
           value={phase.toUpperCase()}
-          valueColor={getPhaseColor(phase)}
+          valueColor={getPhaseColorType(phase)}
           className="font-semibold"
         />
 
@@ -97,11 +118,7 @@ export default function TradingPanel() {
             <StatCard
               label="Position"
               value={activePosition.type.toUpperCase()}
-              valueColor={
-                activePosition.type === "long"
-                  ? "text-green-400"
-                  : "text-red-400"
-              }
+              valueColor={activePosition.type === "long" ? "success" : "danger"}
               className="font-semibold"
             />
 
@@ -113,13 +130,13 @@ export default function TradingPanel() {
             <StatCard
               label="P&L"
               value={formatCurrency(activePosition.pnl)}
-              valueColor={getPnlColor(activePosition.pnl)}
+              valueColor={getPnlColorType(activePosition.pnl)}
             />
 
             <StatCard
               label="P&L %"
               value={formatPercentage(activePosition.pnlPercentage)}
-              valueColor={getPnlColor(activePosition.pnlPercentage)}
+              valueColor={getPnlColorType(activePosition.pnlPercentage)}
             />
 
             <StatCard label="Duration" value={formatDuration(duration)} />
@@ -127,7 +144,13 @@ export default function TradingPanel() {
             <StatCard
               label="Risk"
               value={getRiskLevel(activePosition.pnlPercentage).level}
-              valueColor={getRiskLevel(activePosition.pnlPercentage).color}
+              valueColor={
+                getRiskLevel(activePosition.pnlPercentage).level === "HIGH"
+                  ? "danger"
+                  : getRiskLevel(activePosition.pnlPercentage).level === "MED"
+                  ? "warning"
+                  : "success"
+              }
               className="text-xs font-semibold"
             />
           </div>

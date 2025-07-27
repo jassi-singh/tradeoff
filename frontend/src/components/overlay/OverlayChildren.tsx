@@ -1,17 +1,17 @@
 const OverlayChildren = () => {
   return (
-    <div className="max-w-md w-full">
+    <div className="max-w-md w-full animate-fade-in">
       {/* Header */}
-      <div className="text-center mb-6">
-        <h2 className="text-3xl font-bold text-white mb-2">TradeOff</h2>
+      <div className="text-center mb-8">
+        <h2 className="text-4xl font-bold text-white mb-3">TradeOff</h2>
         <p className="text-gray-400 text-sm">
           10-Minute Stock Market Simulator
         </p>
       </div>
 
       {/* Game Rules */}
-      <div className="bg-gray-900/50 rounded-lg p-4 mb-6 border border-gray-700">
-        <h3 className="text-lg font-semibold text-white mb-3">Game Rules</h3>
+      <div className="bg-gray-900/80 backdrop-blur-sm rounded-xl border border-gray-700/30 p-6 mb-8 shadow-xl">
+        <h3 className="text-lg font-semibold text-white mb-4">Game Rules</h3>
         <div className="space-y-3 text-sm">
           <div className="flex items-center gap-3">
             <div className="w-2 h-2 bg-blue-400 rounded-full"></div>
@@ -53,11 +53,11 @@ const OverlayChildren = () => {
       </div>
 
       {/* Join Form */}
-      <div className="space-y-4">
+      <div className="space-y-6">
         <div>
           <label
             htmlFor="username"
-            className="block text-sm font-medium text-gray-300 mb-2"
+            className="block text-sm font-medium text-gray-300 mb-3"
           >
             Enter Your Trading Name
           </label>
@@ -66,21 +66,21 @@ const OverlayChildren = () => {
             id="username"
             name="username"
             placeholder="e.g., CryptoTrader"
-            className="w-full p-3 rounded-lg bg-gray-800 text-white border border-gray-600 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-all"
+            className="w-full p-3 rounded-lg bg-gray-800/80 text-white border border-gray-600 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-all backdrop-blur-sm"
             required
           />
         </div>
 
         <button
           type="submit"
-          className="w-full bg-green-600 text-white p-3 rounded-lg font-semibold hover:bg-green-700 transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-green-500"
+          className="w-full bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white p-3 rounded-lg font-semibold transition-all duration-200 hover:transform hover:scale-105 focus:outline-none focus:ring-2 focus:ring-green-500"
         >
           Join Trading Arena
         </button>
       </div>
 
       {/* Footer */}
-      <div className="text-center mt-6">
+      <div className="text-center mt-8">
         <p className="text-xs text-gray-500">
           Zero financial risk • Real-time multiplayer • Live leaderboard
         </p>

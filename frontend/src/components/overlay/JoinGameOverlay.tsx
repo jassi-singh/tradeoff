@@ -26,13 +26,15 @@ const JoinGameOverlay: React.FC<{ children: React.ReactNode }> = ({
   }
 
   return (
-    <div className="absolute inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-10">
-      <form
-        onSubmit={handleJoin}
-        className="bg-gray-900/80 backdrop-blur-sm p-8 rounded-lg shadow-lg max-w-md w-full mx-4 border border-gray-700/30"
-      >
-        {children}
-      </form>
+    <div className="absolute inset-0 bg-black/60 backdrop-blur-md flex items-center justify-center z-10">
+      <div className="relative">
+        <form
+          onSubmit={handleJoin}
+          className="bg-gray-900/95 backdrop-blur-sm p-8 rounded-xl shadow-2xl border border-gray-700/50 max-w-md w-full mx-4"
+        >
+          {children}
+        </form>
+      </div>
     </div>
   );
 };
