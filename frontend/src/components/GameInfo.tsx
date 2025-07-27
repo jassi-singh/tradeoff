@@ -3,38 +3,11 @@
 import { useGameStore } from "@/stores/useGameStore";
 import { useWsStore } from "@/stores/useWsStore";
 import { Timer } from "./Timer";
+import { getPhaseColor, getStatusColor } from "@/utils/formatters";
 
 export const GameInfo = () => {
   const { phase } = useGameStore();
   const { status } = useWsStore();
-
-  const getPhaseColor = (phase: string) => {
-    switch (phase) {
-      case "lobby":
-        return "text-yellow-400";
-      case "live":
-        return "text-green-400";
-      case "closed":
-        return "text-red-400";
-      default:
-        return "text-gray-400";
-    }
-  };
-
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case "connected":
-        return "text-green-400";
-      case "connecting":
-        return "text-yellow-400";
-      case "error":
-        return "text-red-400";
-      case "disconnected":
-        return "text-gray-400";
-      default:
-        return "text-gray-400";
-    }
-  };
 
   const getStatusText = (status: string) => {
     switch (status) {

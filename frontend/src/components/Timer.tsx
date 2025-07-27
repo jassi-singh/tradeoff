@@ -1,6 +1,7 @@
 "use client";
 import { useGameStore } from "@/stores/useGameStore";
 import { useEffect, useState } from "react";
+import { formatTime } from "@/utils/formatters";
 
 export const Timer = () => {
   const endTime = useGameStore((state) => state.endTime);
@@ -26,16 +27,6 @@ export const Timer = () => {
 
     return () => clearInterval(interval);
   }, [endTime]);
-
-  const formatTime = (seconds: number | null) => {
-    if (seconds === null) return "00:00";
-    const minutes = Math.floor(seconds / 60);
-    const secs = seconds % 60;
-    return `${String(minutes).padStart(2, "0")}:${String(secs).padStart(
-      2,
-      "0"
-    )}`;
-  };
 
   return (
     <div>

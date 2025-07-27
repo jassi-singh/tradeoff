@@ -2,19 +2,13 @@
 
 import { useGameStore } from "@/stores/useGameStore";
 import useAuthStore from "@/stores/useAuthStore";
+import { LoadingSpinner } from "./common/LoadingSpinner";
+import { formatCurrency } from "@/utils/formatters";
 
 export default function Leaderboard() {
   const { leaderboardData, totalPlayers, longPositions, shortPositions } =
     useGameStore();
   const { user } = useAuthStore();
-
-  const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat("en-US", {
-      style: "currency",
-      currency: "USD",
-      minimumFractionDigits: 2,
-    }).format(amount);
-  };
 
   // Show loading state if no leaderboard data yet
   if (!leaderboardData) {
@@ -26,9 +20,7 @@ export default function Leaderboard() {
             {totalPlayers} players online
           </div>
         </div>
-        <div className="flex justify-center items-center h-32">
-          <div className="text-gray-400">Loading leaderboard...</div>
-        </div>
+        <LoadingSpinner message="Loading leaderboard..." className="h-32" />
       </div>
     );
   }
