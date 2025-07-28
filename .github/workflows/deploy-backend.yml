@@ -24,6 +24,12 @@ jobs:
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
+      
+      - name: Debug SSH Connection
+        run: |
+          echo "${{ secrets.DROPLET_SSH_KEY }}" > private_key.pem
+          chmod 600 private_key.pem
+          ssh -v -o StrictHostKeyChecking=no -i private_key.pem ${{ secrets.DROPLET_USERNAME }}@${{ secrets.DROPLET_HOST }} "echo 'SSH connection successful'"
 
       - name: Build and push Docker image
         uses: docker/build-push-action@v5
