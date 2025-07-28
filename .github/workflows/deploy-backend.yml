@@ -5,7 +5,7 @@ on:
     branches:
       - main # Trigger this workflow on every push to the main branch
     paths:
-      - 'backend/**' # Only run if files inside the /backend directory change
+      - "backend/**" # Only run if files inside the /backend directory change
   workflow_dispatch:
 
 jobs:
@@ -32,6 +32,15 @@ jobs:
           push: true
           tags: jassi16/tradeoff-backend:latest
 
+      - name: Copy docker-compose.prod.yml to Droplet
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.DROPLET_HOST }}
+          username: ${{ secrets.DROPLET_USERNAME }}
+          key: ${{ secrets.DROPLET_SSH_KEY }}
+          source: "docker-compose.prod.yml"
+          target: "/app/tradeoff-backend/"
+
       - name: Deploy to DigitalOcean Droplet
         uses: appleboy/ssh-action@v1.0.3
         with:
@@ -39,6 +48,6 @@ jobs:
           username: ${{ secrets.DROPLET_USERNAME }}
           key: ${{ secrets.DROPLET_SSH_KEY }}
           script: |
-            cd /home/ubuntu/tradeoff-backend
+            cd /app/tradeoff-backend
             docker pull jassi16/tradeoff-backend:latest
-            docker-compose -f docker-compose.prod.yml up -d --force-recreate
+            docker compose -f docker-compose.prod.yml up -d --force-recreate
