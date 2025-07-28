@@ -9,7 +9,5 @@ services:
     # This file must exist on your server for the container to read it
     env_file:
       - .env
-    ports:
-      - "8080:8080"
     # This allows the container to connect to your Supabase DB on the host network
     network_mode: "host"
