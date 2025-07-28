@@ -11,7 +11,7 @@ export default function Home() {
       <div className="w-full max-w-7xl flex-grow flex flex-col">
         <header className="mb-6">
           <h1 className="text-4xl font-bold bg-gradient-to-r from-green-400 to-blue-400 bg-clip-text text-transparent">
-            TradeOff
+            Trade Off
           </h1>
           <p className="text-gray-400 text-sm mt-2">
             10-Minute Stock Market Simulator
