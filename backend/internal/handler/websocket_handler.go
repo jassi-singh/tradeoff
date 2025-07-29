@@ -17,6 +17,7 @@ var upgrader = websocket.Upgrader{
 }
 
 func (h *Handler) HandleWebSocket(w http.ResponseWriter, r *http.Request) {
+	log.Println("WebSocket connection requested")
 	// Get token from query parameter
 	encodedToken := r.URL.Query().Get("token")
 	if encodedToken == "" {
