@@ -23,6 +23,7 @@ func NewRouter(h *handler.Handler, config *config.Config) *chi.Mux {
 	})
 
 	router.Use(corsMiddleware)
+	router.Use(chiMiddleware.StripSlashes)
 	router.Use(chiMiddleware.Logger)
 
 	router.Get("/", func(w http.ResponseWriter, r *http.Request) {
